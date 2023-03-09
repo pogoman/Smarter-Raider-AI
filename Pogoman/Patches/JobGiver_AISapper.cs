@@ -27,9 +27,7 @@ namespace PogoAI.Patches
                 if (!intVec.IsValid)
                 {
                     Thing attackTarget;
-                    if (!pawn.Map.listerThings.AllThings.Where(x => x.Faction == Faction.OfPlayer
-                        && pawn.CanReach(x, PathEndMode.OnCell, Danger.Deadly, false, false, TraverseMode.PassAllDestroyableThings))
-                          .TryRandomElement(out attackTarget))
+                    if (!pawn.Map.listerThings.AllThings.Where(x => x.Faction == Faction.OfPlayer).TryRandomElement(out attackTarget))
                     {
                         return false;
                     }
@@ -40,14 +38,14 @@ namespace PogoAI.Patches
                 {
                     return false;
                 }
-                
-                var customTuning = new PathFinderCostTuning() { custom = new InEnemyLosPathFinderTuning(pawn.Map, pawn.GetLord()) };
+
+                var customTuning = new PathFinderCostTuning() { costBlockedWallExtraForNaturalWalls = 1000 };
                 using (PawnPath pawnPath = pawn.Map.pathFinder.FindPath(pawn.Position, intVec,
-                    TraverseParms.For(pawn, Danger.Deadly, TraverseMode.PassAllDestroyableThings, false, false, false), PathEndMode.OnCell, customTuning))
+                    TraverseParms.For(pawn, Danger.Deadly, TraverseMode.PassAllDestroyableThings, false, true, false), PathEndMode.OnCell, customTuning))
                 {
                     IntVec3 cellBeforeBlocker;
                     Thing thing = pawnPath.FirstBlockingBuilding(out cellBeforeBlocker, pawn);
-                    //Log.Message($"tuned: start {pawnPath.FirstNode} finish {pawnPath.LastNode} cost {pawnPath.TotalCost} thing {thing}");
+                    Log.Message($"tuned: start {pawnPath.FirstNode} finish {pawnPath.LastNode} cost {pawnPath.TotalCost} thing {thing}");
                     if (thing != null)
                     {
                         Job job = DigUtility.PassBlockerJob(pawn, thing, cellBeforeBlocker, __instance.canMineMineables, __instance.canMineNonMineables);
@@ -57,8 +55,15 @@ namespace PogoAI.Patches
                             return false;
                         }
                     }
+                    else
+                    {
+                        Job job = JobMaker.MakeJob(JobDefOf.Goto, cellBeforeBlocker, 500, true);
+                        BreachingUtility.FinalizeTrashJob(job);
+                        __result = job;
+                        return false;
+                    }
                 }
-                Log.Message($"{pawn} No sap requied goto instead");
+                Log.Message($"{pawn} why are we here");
                 return false;
             }
         }
