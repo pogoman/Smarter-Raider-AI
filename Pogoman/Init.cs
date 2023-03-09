@@ -15,6 +15,9 @@ namespace PogoAI
 			Log.Message("POGO INITIALISE");
             var harm  = new Harmony("pogo.ai");
 			harm.PatchAll();
+
+            var original = typeof(Verb).GetMethod("TryFindShootLineFromTo");
+            harm.Unpatch(original, HarmonyPatchType.Prefix, "CombatExtended.HarmonyCE");
         }
 
     }

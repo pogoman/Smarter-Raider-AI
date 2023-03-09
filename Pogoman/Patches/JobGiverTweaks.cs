@@ -14,27 +14,27 @@ namespace PogoAI.Patches
     internal class JobGiverTweaks
     {
         [HarmonyPatch(typeof(JobGiver_AIGotoNearestHostile), "TryGiveJob")]
-        private static class JobGiver_AIGotoNearestHostile_TryGiveJob_Patch
+        static class JobGiver_AIGotoNearestHostile_TryGiveJob_Patch
         {
-            public static bool Prefix()
+            static bool Prefix()
             {
                 return false;
             }
         }
 
         [HarmonyPatch(typeof(JobGiver_AIFightEnemy), nameof(JobGiver_AIFightEnemy.TryGiveJob))]
-        private static class JobGiver_AIFightEnemy_TryGiveJob_Patch
+        static class JobGiver_AIFightEnemy_TryGiveJob_Patch
         {
-            public static void Prefix(Pawn pawn, JobGiver_AIFightEnemy __instance)
+            static void Prefix(Pawn pawn, JobGiver_AIFightEnemy __instance)
             {
                 __instance.needLOSToAcquireNonPawnTargets = true;
             }
         }
 
         [HarmonyPatch(typeof(RimWorld.JobGiver_AITrashBuildingsDistant), "TryGiveJob")]
-        private static class JobGiver_AITrashBuildingsDistant_TryGiveJob_Patch
+        static class JobGiver_AITrashBuildingsDistant_TryGiveJob_Patch
         {
-            public static bool Prefix()
+            static bool Prefix()
             {
                 return false;
             }

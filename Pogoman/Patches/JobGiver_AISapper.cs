@@ -14,9 +14,9 @@ namespace PogoAI.Patches
     internal class JobGiver_AISapper
     {
         [HarmonyPatch(typeof(RimWorld.JobGiver_AISapper), "TryGiveJob")]
-        private static class JobGiver_AISapper_TryGiveJob_Patch
+        static class JobGiver_AISapper_TryGiveJob_Patch
         {
-            public static bool Prefix(Pawn pawn, ref Job __result, RimWorld.JobGiver_AISapper __instance)
+            static bool Prefix(Pawn pawn, ref Job __result, RimWorld.JobGiver_AISapper __instance)
             {
                 IntVec3 intVec = pawn.mindState.duty.focus.Cell;
                 if (intVec.IsValid && (float)intVec.DistanceToSquared(pawn.Position) < 100f && intVec.GetRoom(pawn.Map) == pawn.GetRoom(RegionType.Set_All) && intVec.WithinRegions(pawn.Position, pawn.Map, 9, TraverseMode.NoPassClosedDoors, RegionType.Set_Passable))
@@ -45,7 +45,7 @@ namespace PogoAI.Patches
                 {
                     IntVec3 cellBeforeBlocker;
                     Thing thing = pawnPath.FirstBlockingBuilding(out cellBeforeBlocker, pawn);
-                    Log.Message($"tuned: start {pawnPath.FirstNode} finish {pawnPath.LastNode} cost {pawnPath.TotalCost} thing {thing}");
+                    //Log.Message($"tuned: pawn {pawn} job {pawn.CurJob} start {pawnPath.FirstNode} finish {pawnPath.LastNode} cost {pawnPath.TotalCost} thing {thing?.def}");
                     if (thing != null)
                     {
                         Job job = DigUtility.PassBlockerJob(pawn, thing, cellBeforeBlocker, __instance.canMineMineables, __instance.canMineNonMineables);
@@ -58,7 +58,6 @@ namespace PogoAI.Patches
                     else
                     {
                         Job job = JobMaker.MakeJob(JobDefOf.Goto, cellBeforeBlocker, 500, true);
-                        BreachingUtility.FinalizeTrashJob(job);
                         __result = job;
                         return false;
                     }

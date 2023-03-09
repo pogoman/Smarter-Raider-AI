@@ -2,14 +2,14 @@
 using System.Collections.Generic;
 using Verse;
 
-namespace PogoAI.Patches
+namespace PogoAI.Patches.CE
 {
     internal class AvoidGrid
     {
         [HarmonyPatch(typeof(Verse.AI.AvoidGrid), "Regenerate")]
         static class AvoidGrid_Regenerate
         {
-            public static bool Prefix(Verse.AI.AvoidGrid __instance)
+            static bool Prefix(Verse.AI.AvoidGrid __instance)
             {
                 __instance.gridDirty = false;
                 __instance.grid.Clear(0);
@@ -29,7 +29,7 @@ namespace PogoAI.Patches
                 return false;
             }
 
-            private static void PrintAvoidGridAroundTurret(Verse.AI.AvoidGrid __instance, Building tur, CompEquippable equip)
+            static void PrintAvoidGridAroundTurret(Verse.AI.AvoidGrid __instance, Building tur, CompEquippable equip)
             {
                 float range = equip.PrimaryVerb.verbProps.range;
                 float num = equip.PrimaryVerb.verbProps.EffectiveMinRange(true);

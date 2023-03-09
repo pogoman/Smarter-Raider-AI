@@ -13,9 +13,9 @@ namespace PogoAI.Patches
     {
         [HarmonyPatch(typeof(RimWorld.LordJob_AssaultColony), MethodType.Constructor, new Type[] { typeof(Faction), 
             typeof(bool), typeof(bool), typeof(bool), typeof(bool), typeof(bool), typeof(bool), typeof(bool) })]
-        public static class LordJob_AssaultColony_Ctor
+        static class LordJob_AssaultColony_Ctor
         {
-            public static void Postfix(ref RimWorld.LordJob_AssaultColony __instance)
+            static void Postfix(ref RimWorld.LordJob_AssaultColony __instance)
             {
                 __instance.breachers = true;
                 __instance.useAvoidGridSmart = true;
