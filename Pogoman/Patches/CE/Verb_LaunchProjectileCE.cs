@@ -1,8 +1,12 @@
 ﻿using HarmonyLib;
 using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Numerics;
 using System.Reflection;
 using Verse;
+using Verse.AI;
+using UnityEngine;
 
 namespace PogoAI.Patches.CE
 {
@@ -12,18 +16,19 @@ namespace PogoAI.Patches.CE
         static class Verb_LaunchProjectileCE_CanHitTargetFrom
         {
             static MethodBase target;
-            static Type type;
 
             static bool Prepare()
             {
-                var mod = LoadedModManager.RunningMods.FirstOrDefault(m => m.Name == "Combat Extended");
-                if (mod == null)
+                Init.CombatExtended = LoadedModManager.RunningMods.FirstOrDefault(m => m.Name == "Combat Extended");
+
+                if (Init.CombatExtended == null)
                 {
                     return false;
                 }
 
-                type = mod.assemblies.loadedAssemblies.FirstOrDefault(a => a.GetName().Name == "CombatExtended")
-                    ?.GetType("CombatExtended.Verb_LaunchProjectileCE");
+                var assembly = Init.CombatExtended.assemblies.loadedAssemblies.FirstOrDefault(a => a.GetName().Name == "CombatExtended");
+
+                var type = assembly   ?.GetType("CombatExtended.Verb_LaunchProjectileCE");
 
                 if (type == null)
                 {
@@ -42,6 +47,9 @@ namespace PogoAI.Patches.CE
                     return false;
                 }
 
+                //var original = typeof(Verb).GetMethod("TryFindShootLineFromTo");
+                //Init.harm.Unpatch(original, HarmonyPatchType.Prefix, "CombatExtended.HarmonyCE");
+
                 return true;
             }
 
@@ -50,17 +58,17 @@ namespace PogoAI.Patches.CE
                 return target;
             }
 
-            static bool Prefix(IntVec3 root, LocalTargetInfo targ, Verb __instance, ref bool __result)
-            {
-                if (targ.Thing != null && targ.Thing == __instance.caster)
-                {
-                    __result = __instance.targetParams.canTargetSelf;
-                    return false;
-                }
-                ShootLine shootLine;
-                __result = !__instance.ApparelPreventsShooting() && __instance.TryFindShootLineFromTo(root, targ, out shootLine);
-                return false;
-            }
+            //static bool Prefix(IntVec3 root, LocalTargetInfo targ, Verb __instance, ref bool __result)
+            //{
+            //    if (targ.Thing != null && targ.Thing == __instance.caster)
+            //    {
+            //        __result = __instance.targetParams.canTargetSelf;
+            //        return false;
+            //    }
+            //    ShootLine shootLine;
+            //    __result = !__instance.ApparelPreventsShooting() && __instance.TryFindShootLineFromTo(root, targ, out shootLine);
+            //    return false;
+            //}
 
         }
     }

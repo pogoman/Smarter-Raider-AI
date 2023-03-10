@@ -26,6 +26,11 @@ namespace PogoAI.Patches
                 }
                 if (!intVec.IsValid)
                 {
+                    //FIX THIS
+                    if (pawn.Map.attackTargetsCache.TargetsHostileToFaction(pawn.Faction).Count == 0)
+                    {
+                        return false;
+                    }
                     Thing attackTarget;
                     if (!pawn.Map.listerThings.AllThings.Where(x => x.Faction == Faction.OfPlayer).TryRandomElement(out attackTarget))
                     {

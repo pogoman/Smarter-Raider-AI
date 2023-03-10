@@ -20,7 +20,6 @@ namespace PogoAI.Patches.CE
                     {
                         var building = allBuildingsColonist[i];
                         CompEquippable equip = (CompEquippable)building.GetType().GetProperty("GunCompEq").GetValue(building, null);
-                        Log.Message($"{equip}");
                         PrintAvoidGridAroundTurret(__instance, building, equip);
                     }
                 }

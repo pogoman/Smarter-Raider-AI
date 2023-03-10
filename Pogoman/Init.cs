@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using HarmonyLib;
 using RimWorld;
 using UnityEngine;
@@ -9,15 +10,15 @@ namespace PogoAI
 {
     public class Init : Mod
     {
-       
+
+        public static ModContentPack CombatExtended;
+        public static Harmony harm;
+
         public Init(ModContentPack contentPack) : base(contentPack)
         {
 			Log.Message("POGO INITIALISE");
-            var harm  = new Harmony("pogo.ai");
+            harm  = new Harmony("pogo.ai");
 			harm.PatchAll();
-
-            var original = typeof(Verb).GetMethod("TryFindShootLineFromTo");
-            harm.Unpatch(original, HarmonyPatchType.Prefix, "CombatExtended.HarmonyCE");
         }
 
     }

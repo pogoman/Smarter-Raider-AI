@@ -16,7 +16,6 @@ namespace PogoAI.Patches
 {
     internal class LordToil_AssaultColonyBreaching
     {
-        //NNEED CASE FOR NO BREACHERS
         [HarmonyPatch(typeof(RimWorld.LordToil_AssaultColonyBreaching), "UpdateAllDuties")]
         static class LordToil_AssaultColonyBreaching_UpdateAllDuties
         {
@@ -26,20 +25,10 @@ namespace PogoAI.Patches
                 {
                     return false;
                 }
-                if (!__instance.Data.breachDest.IsValid)
-                {
-                    __instance.Data.Reset();
-                    __instance.Data.preferMelee = Rand.Chance(0.5f);
-                    __instance.Data.breachStart = __instance.lord.ownedPawns[0].PositionHeld;
-                    __instance.Data.breachDest = GenAI.RandomRaidDest(__instance.Data.breachStart, __instance.Map);
-                    int breachRadius = Mathf.RoundToInt(RimWorld.LordToil_AssaultColonyBreaching.BreachRadiusFromNumRaiders.Evaluate((float)__instance.lord.ownedPawns.Count));
-                    int walkMargin = Mathf.RoundToInt(RimWorld.LordToil_AssaultColonyBreaching.WalkMarginFromNumRaiders.Evaluate((float)__instance.lord.ownedPawns.Count));
-                    __instance.Data.breachingGrid.CreateBreachPath(__instance.Data.breachStart, __instance.Data.breachDest, breachRadius, walkMargin, __instance.useAvoidGrid);
-                }
-                __instance.Data.maxRange = 144f;
                 if (__instance.Data?.breachDest != null && __instance.Data.breachDest.IsValid)
                 {
-                    if (__instance.Data.currentTarget == null) {
+                    if (__instance.Data.currentTarget == null)
+                    {
                         return false;
                     }
                     Pawn checkWith;
@@ -66,125 +55,33 @@ namespace PogoAI.Patches
                             }
                         }
                     }
-
-                    foreach (var pawn in __instance.lord.ownedPawns)
-                    {
-                        if (IsPogoBreacher(pawn))
-                        {
-                            pawn.mindState.duty = new PawnDuty(DutyDefOf.Breaching, __instance.Data.breachDest, -1f);
-                        }
-                        else
-                        {
-                            pawn.mindState.duty = new PawnDuty(DutyDefOf.Escort, __instance.lord.ownedPawns.RandomElement());
-                        }
-                    }
                 }
-                return false;
+
+                if (!__instance.Data.breachDest.IsValid)
+                {
+                    __instance.Data.Reset();
+                    __instance.Data.preferMelee = Rand.Chance(0.5f);
+                    __instance.Data.breachStart = __instance.lord.ownedPawns[0].PositionHeld;
+                    __instance.Data.breachDest = GenAI.RandomRaidDest(__instance.Data.breachStart, __instance.Map);
+                    int breachRadius = Mathf.RoundToInt(RimWorld.LordToil_AssaultColonyBreaching.BreachRadiusFromNumRaiders.Evaluate((float)__instance.lord.ownedPawns.Count));
+                    int walkMargin = Mathf.RoundToInt(RimWorld.LordToil_AssaultColonyBreaching.WalkMarginFromNumRaiders.Evaluate((float)__instance.lord.ownedPawns.Count));
+                    __instance.Data.breachingGrid.CreateBreachPath(__instance.Data.breachStart, __instance.Data.breachDest, breachRadius, walkMargin, __instance.useAvoidGrid);
+                }
+
+                return true;
             }
 
-            //static void Postfix(RimWorld.LordToil_AssaultColonyBreaching __instance)
-            //{
-            //    Log.Message($"pawnsMeleeDestructive {__instance.pawnsMeleeDestructive.Count}");
-            //    Log.Message($"pawnsRangedDestructive {__instance.pawnsRangedDestructive.Count}");
-            //    Log.Message($"pawnsRangedGeneral {__instance.pawnsRangedGeneral.Count}");
-            //    Log.Message($"pawnSoloAttackers {__instance.pawnSoloAttackers.Count}");
-            //    Log.Message($"pawnsEscort {__instance.pawnsEscort.Count}");
-            //    Log.Message($"pawnsLost {__instance.pawnsLost.Count}");
-
-            //    var breachers = __instance.lord.ownedPawns.Where(x => x.mindState.duty.def == DutyDefOf.Breaching);
-            //    //Log.Message($"breac dest: {__instance.Data.breachDest} breach target: {__instance.Data.currentTarget} breachers {breachers.Count()}");
-            //    if (__instance.Data.currentTarget != null)
-            //    {
-            //        foreach (var pawn in __instance.lord.ownedPawns)
-            //        {
-            //            var isBreacher = IsPogoBreacher(pawn);
-            //            if (IsPogoBreacher(pawn))
-            //            {
-            //                if (pawn.mindState.duty.def != DutyDefOf.Breaching)
-            //                {
-            //                    pawn.mindState.duty = new PawnDuty(DutyDefOf.Breaching, __instance.Data.breachDest, -1f);
-            //                }
-            //            }
-            //            else
-            //            {
-            //                if (pawn.mindState.duty.def == DutyDefOf.Breaching)
-            //                {
-            //                    pawn.mindState.duty = new PawnDuty(DutyDefOf.Escort, __instance.lord.ownedPawns.RandomElement());
-            //                }
-            //            }
-            //        }
-            //    }
-            //    else
-            //    {
-            //        //var ranged = breachers.Where(x => x.equipment.PrimaryEq?.PrimaryVerb?.verbProps?.range != null);
-            //        //if (ranged.Count() > 0)
-            //        //{
-            //        //    var averageRange = ranged.Average(x => x.equipment.PrimaryEq.PrimaryVerb.verbProps.range);
-            //        //    foreach (var breacher in breachers)
-            //        //    {
-            //        //        var range = breacher.equipment.PrimaryEq?.PrimaryVerb?.verbProps?.range;
-            //        //        if (range != null)
-            //        //        {
-            //        //            if (Math.Abs(range.Value - averageRange) > 50)
-            //        //            {
-            //        //                breacher.mindState.duty = new PawnDuty(DutyDefOf.Escort, breachers.RandomElement<Pawn>(),
-            //        //                    RimWorld.BreachingUtility.EscortRadius(breacher));
-            //        //            }
-            //        //        }
-            //        //    }
-            //        //}
-                    
-            //    }
-
-            //    __instance.Data.maxRange = 144f;
-            //}
-
-            //[HarmonyPatch(typeof(RimWorld.LordToil_AssaultColonyBreaching), "SetBreachDuty")]
-            //static class LordToil_AssaultColonyBreaching_SetBreachDuty
-            //{
-            //    public static void Prefix(ref List<Pawn> breachers, RimWorld.LordToil_AssaultColonyBreaching __instance)
-            //    {
-            //        var pogoBreachers = new List<Pawn>();
-            //        foreach (var breacher in breachers)
-            //        {
-            //            if (IsPogoBreacher(breacher))
-            //            {
-            //                pogoBreachers.Add(breacher);
-            //            }
-            //            else
-            //            {
-            //                __instance.pawnsEscort.Add(breacher);
-            //            }
-            //        }
-            //        breachers = pogoBreachers;
-            //    }
-            //}
-
-            static bool IsPogoBreacher(Pawn pawn)
+            static void Postfix(RimWorld.LordToil_AssaultColonyBreaching __instance)
             {
-                Pawn_EquipmentTracker equipment = pawn.equipment;
-                CompEquippable compEquippable = (equipment != null) ? equipment.PrimaryEq : null;
-                if (compEquippable == null)
-                {
-                    return false;
-                }
-                Verb primaryVerb = compEquippable.PrimaryVerb;
-                if (RimWorld.BreachingUtility.UsableVerb(primaryVerb) && primaryVerb.verbProps.ai_IsBuildingDestroyer)
-                {
-                    return true;
-                }
+                Log.Message($"pawnsMeleeDestructive {__instance.pawnsMeleeDestructive.Count}");
+                Log.Message($"pawnsRangedDestructive {__instance.pawnsRangedDestructive.Count}");
+                Log.Message($"pawnsRangedGeneral {__instance.pawnsRangedGeneral.Count}");
+                Log.Message($"pawnSoloAttackers {__instance.pawnSoloAttackers.Count}");
+                Log.Message($"pawnsEscort {__instance.pawnsEscort.Count}");
+                Log.Message($"pawnsLost {__instance.pawnsLost.Count}");
 
-                if (new string[] { "Stick", "Concussion", "Rocket", "Inferno", "Blast", "Thermal", "Breach", "Thump" }.Any(
-                    x => compEquippable.ToString().IndexOf(x, StringComparison.OrdinalIgnoreCase) >= 0))
-                {
-                    return true;
-                }
-
-                return false;
+                __instance.Data.maxRange = 32f;
             }
         }
-
-
-
     }
 }
