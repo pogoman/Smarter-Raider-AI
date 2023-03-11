@@ -17,15 +17,28 @@ namespace PogoAI.Patches
 {
     internal class BreachingUtility
     {
-
-        [HarmonyPatch(typeof(RimWorld.BreachingUtility), "TryFindCastPosition")]
-        static class BreachingUtility_TryFindCastPosition
+        [HarmonyPatch(typeof(BreachRangedCastPositionFinder), "SafeForRangedCast")]
+        static class BreachRangedCastPositionFinder_SafeForRangedCast
         {
-            static bool Prefix(ref bool __result, Pawn pawn, Verb verb, Thing target, out IntVec3 result)
+            static bool Prefix(IntVec3 c, ref bool __result, BreachRangedCastPositionFinder __instance)
             {
-                __result = true;
-                result = pawn.Position;
+                CellRect occupiedRect = CellRect.SingleCell(__instance.target.Position);
+                var distance = occupiedRect.ClosestDistSquaredTo(c);
+                var squaredEffectiveThird = __instance.verb.EffectiveRange * __instance.verb.EffectiveRange / 4;
+                __result = distance > squaredEffectiveThird;
                 return false;
+            }
+        }
+
+        [HarmonyPatch(typeof(RimWorld.BreachingUtility), "BlocksBreaching")]
+        static class BreachingUtility_BlocksBreaching
+        {
+            static void Postfix(Map map, IntVec3 c, ref bool __result)
+            {
+                if (__result)
+                {
+                    __result = GenClosest.ClosestThing_Global(c, map.listerBuildings.allBuildingsColonist, 10f) != null;
+                }
             }
         }
 
@@ -34,10 +47,17 @@ namespace PogoAI.Patches
         {
             static void Postfix(ref float __result)
             {
-                if (Init.CombatExtended)
-                {
-                    __result *= 4;
-                }
+                __result *= 10;
+            }
+        }
+
+        [HarmonyPatch(typeof(RimWorld.BreachingUtility), "IsSoloAttackVerb")]
+        static class BreachingUtility_IsSoloAttackVerb
+        {
+            static bool Prefix(ref bool __result)
+            {
+                __result = false;
+                return false;
             }
         }
 
@@ -53,43 +73,36 @@ namespace PogoAI.Patches
                     return false;
                 }
 
-                if (Init.CombatExtended)
+                if (Init.combatExtended)
                 {
-                    if (new string[] { "Flame", "Grenade Launcher" }.Any(
-                                        x => compEquippable.ToString().IndexOf(x, StringComparison.OrdinalIgnoreCase) >= 0))
+                    if (compEquippable.ToString().IndexOf("flame", StringComparison.OrdinalIgnoreCase) >= 0)
                     {
                         return false;
                     }
                 }
-
-                if (new string[] { "Stick", "Concussion", "Rocket", "Inferno", "Blast", "Thermal", "Thump" }.Any(
-                    x => compEquippable.ToString().IndexOf(x, StringComparison.OrdinalIgnoreCase) >= 0))
+                var breachWeapons = PogoSettings.breachWeapons.Replace(" ", string.Empty).Split(',');
+                if (breachWeapons.Any(x => compEquippable.ToString().IndexOf(x, StringComparison.OrdinalIgnoreCase) >= 0))
                 {
-                    if (Init.CombatExtended)
+                    if (Init.combatExtended)
                     {
                         if (new string[] { "Inferno", "Blast", "Thermal", "Thump" }.Any(
                             x => compEquippable.ToString().IndexOf(x, StringComparison.OrdinalIgnoreCase) >= 0))
                         {
                             if (!pawn.inventory.innerContainer.Any(x => x.ToString().Contains("Ammo")))
                             {
-                                Log.Message("no ammo");
                                 return false;
                             }
                         }
                     }
                     __result = compEquippable.PrimaryVerb;
+                    if (compEquippable.PrimaryVerb.verbProps.ai_IsBuildingDestroyer && !pawn.RaceProps.IsMechanoid)
+                    {
+                        compEquippable.PrimaryVerb.verbProps.ai_IsBuildingDestroyer = false;
+                    }
                     return false;
                 }
 
-                if (Init.CombatExtended)
-                { 
-                    if (pawn.inventory.innerContainer.Any(x => x.ToString().Contains("Ammo")))
-                    {
-                        return false;
-                    }
-                }
-
-                return true;
+                return false;
             }
         }
     }

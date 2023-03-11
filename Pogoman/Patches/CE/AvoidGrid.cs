@@ -11,6 +11,10 @@ namespace PogoAI.Patches.CE
         {
             static bool Prefix(Verse.AI.AvoidGrid __instance)
             {
+                if (!Init.combatExtended)
+                {
+                    return true;
+                }
                 __instance.gridDirty = false;
                 __instance.grid.Clear(0);
                 List<Building> allBuildingsColonist = __instance.map.listerBuildings.allBuildingsColonist;

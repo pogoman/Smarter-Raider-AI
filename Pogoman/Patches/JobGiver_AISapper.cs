@@ -26,8 +26,7 @@ namespace PogoAI.Patches
                 }
                 if (!intVec.IsValid)
                 {
-                    //FIX THIS
-                    if (pawn.Map.attackTargetsCache.TargetsHostileToFaction(pawn.Faction).Count == 0)
+                    if (!pawn.Map.attackTargetsCache.TargetsHostileToFaction(pawn.Faction).Any(x => !x.ThreatDisabled(pawn)))
                     {
                         return false;
                     }

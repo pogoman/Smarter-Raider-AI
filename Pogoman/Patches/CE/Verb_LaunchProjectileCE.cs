@@ -22,14 +22,14 @@ namespace PogoAI.Patches.CE
             {
                 CE = LoadedModManager.RunningMods.FirstOrDefault(m => m.Name == "Combat Extended");
 
-                if (CE == null)
+                if (CE == null || !PogoSettings.combatExtendedCompatPerf)
                 {
                     return false;
                 }
 
                 var assembly = CE.assemblies.loadedAssemblies.FirstOrDefault(a => a.GetName().Name == "CombatExtended");
 
-                var type = assembly   ?.GetType("CombatExtended.Verb_LaunchProjectileCE");
+                var type = assembly?.GetType("CombatExtended.Verb_LaunchProjectileCE");
 
                 if (type == null)
                 {

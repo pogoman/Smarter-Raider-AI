@@ -1,16 +1,10 @@
 ﻿using HarmonyLib;
-using Mono.Unix.Native;
 using RimWorld;
 using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using UnityEngine;
 using Verse;
 using Verse.AI;
-using static UnityEngine.GraphicsBuffer;
-using static Verse.AI.BreachingGrid;
 
 namespace PogoAI.Patches
 {
@@ -19,6 +13,11 @@ namespace PogoAI.Patches
         [HarmonyPatch(typeof(RimWorld.LordToil_AssaultColonyBreaching), "UpdateAllDuties")]
         static class LordToil_AssaultColonyBreaching_UpdateAllDuties
         {
+            static void Postfix(RimWorld.LordToil_AssaultColonyBreaching __instance)
+            {
+                __instance.Data.maxRange = 64f;
+            }
+
             static bool Prefix(RimWorld.LordToil_AssaultColonyBreaching __instance)
             {
                 if (!__instance.lord.ownedPawns.Any<Pawn>())
