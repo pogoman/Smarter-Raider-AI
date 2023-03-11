@@ -10,14 +10,16 @@ namespace PogoAI
 {
     public class PogoSettings : ModSettings
     {
-        public static string breachWeapons;
-        public static bool combatExtendedCompatPerf;
+        public const string DEFAULT_BREACH_WEAPONS = "bomb, concussion, frag, rocket, inferno, blast, thermal, thump";
+
+        public static string BreachWeapons = DEFAULT_BREACH_WEAPONS;
+        public static bool CombatExtendedCompatPerf = true;
 
         public override void ExposeData()
         {
-            Scribe_Values.Look(ref breachWeapons, "breachWeapons", "bomb, concussion, frag, rocket, inferno, blast, thermal, thump");
-            Scribe_Values.Look(ref combatExtendedCompatPerf, "combatExtendedCompatPerf", true);
             base.ExposeData();
+            //Scribe_Values.Look(ref BreachWeapons, "breachWeapons", DEFAULT_BREACH_WEAPONS, true);
+            Scribe_Values.Look(ref CombatExtendedCompatPerf, "combatExtendedCompatPerf", true, true);
         }
     }
 
@@ -26,6 +28,8 @@ namespace PogoAI
         PogoSettings settings;
         public static bool combatExtended = false;
         public static Harmony harm;
+        string breachWeapons = PogoSettings.BreachWeapons;
+        bool combatExtendedCompatPerf = PogoSettings.CombatExtendedCompatPerf;
 
         public Init(ModContentPack contentPack) : base(contentPack)
         {
@@ -38,16 +42,18 @@ namespace PogoAI
 
         public override void DoSettingsWindowContents(Rect inRect)
         {
+            base.DoSettingsWindowContents(inRect);
+            settings = GetSettings<PogoSettings>();
             Listing_Standard listingStandard = new Listing_Standard();
             listingStandard.Begin(inRect);
-            listingStandard.TextEntryLabeled("Allowed Breach Weapons:\n(comma separated, case insentive, partial matches)", PogoSettings.breachWeapons, 3);
+            //listingStandard.TextEntryLabeled("Allowed Breach Weapons", breachWeapons, 3);
             if (combatExtended)
             {
                 listingStandard.CheckboxLabeled("Enable Combat Extended Compatibility Performance fixes\nNote: AI will friendly fire more but performance is much better. Requires game restart.",
-                    ref PogoSettings.combatExtendedCompatPerf);
+                    ref PogoSettings.CombatExtendedCompatPerf);
             }
             listingStandard.End();
-            base.DoSettingsWindowContents(inRect);
+            WriteSettings();
         }
 
         public override string SettingsCategory()
