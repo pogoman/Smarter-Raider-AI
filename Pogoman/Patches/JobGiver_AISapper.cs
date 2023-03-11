@@ -67,7 +67,6 @@ namespace PogoAI.Patches
                         return false;
                     }
                 }
-                Log.Message($"{pawn} why are we here");
                 return false;
             }
         }
