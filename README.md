@@ -1,5 +1,4 @@
 # All Raids Can Breach
-Lightweight intelligent decision making mod for RimWorld Raid AI
 
 Tynan says Rimworld is a storyteller, not a skill test. This mod is for people who want it to be both.
 
