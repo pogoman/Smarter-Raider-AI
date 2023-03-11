@@ -11,7 +11,7 @@ using Verse.AI.Group;
 
 namespace PogoAI.Patches
 {
-    internal class JobGiverTweaks
+    internal class JobGiver_Disabled
     {
         [HarmonyPatch(typeof(JobGiver_AIGotoNearestHostile), "TryGiveJob")]
         static class JobGiver_AIGotoNearestHostile_TryGiveJob_Patch

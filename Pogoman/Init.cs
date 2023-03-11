@@ -11,14 +11,15 @@ namespace PogoAI
     public class Init : Mod
     {
 
-        public static ModContentPack CombatExtended;
+        public static bool CombatExtended;
         public static Harmony harm;
 
         public Init(ModContentPack contentPack) : base(contentPack)
         {
 			Log.Message("POGO INITIALISE");
             harm  = new Harmony("pogo.ai");
-			harm.PatchAll();
+            Init.CombatExtended = LoadedModManager.RunningMods.FirstOrDefault(m => m.Name == "Combat Extended") != null;
+            harm.PatchAll();
         }
 
     }

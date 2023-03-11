@@ -22,10 +22,12 @@ namespace PogoAI.Patches
         {
             static bool Prefix(IntVec3 c, ref bool __result, BreachRangedCastPositionFinder __instance)
             {
-                ShootLine shootLine;
+                ShootLine shootLine; 
                 var cellsInFront = LastBresenhamCellsBetweenLimit(c, __instance.target.Position, 5);
-                //Log.Message($"from: {c} infront: {cellsInFront}");
                 __result = __instance.verb.TryFindShootLineFromTo(c, cellsInFront, out shootLine);
+                //__result = __instance.verb.TryFindShootLineFromTo(c, __instance.target.Position, out shootLine);
+                if (__result)
+                    Log.Message($"check: {c}, {__instance.target} {__result} {cellsInFront}");
                 return false;
             }
         }
@@ -87,6 +89,17 @@ namespace PogoAI.Patches
             }
             while (num6 > 0);
             return tmpCell;
+        }
+
+        [HarmonyPatch(typeof(RimWorld.BreachingUtility), "TryFindCastPosition")]
+        static class BreachingUtility_TryFindCastPosition
+        {
+            static bool Prefix(ref bool __result, Pawn pawn, Verb verb, Thing target, out IntVec3 result)
+            {
+                __result = true;
+                result = pawn.Position;
+                return false;
+            }
         }
 
         [HarmonyPatch(typeof(RimWorld.BreachingUtility), "EscortRadius")]
