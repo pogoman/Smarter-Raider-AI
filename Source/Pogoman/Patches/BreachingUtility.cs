@@ -145,10 +145,12 @@ namespace PogoAI.Patches
                         }
                     }
 
-                    //These two statements ensure rockets are fired first and grenadiers dont get caught in explosion
-                    if (equipment.Primary.def.weaponTags.Any(x => x.Matches("GunSingleUse")) && !compEquippable.PrimaryVerb.verbProps.ai_IsBuildingDestroyer)
+                    if (!compEquippable.PrimaryVerb.verbProps.ai_IsBuildingDestroyer)
                     {
-                        compEquippable.PrimaryVerb.verbProps.ai_IsBuildingDestroyer = true;
+                        if (pawn.Faction == Faction.OfMechanoids || equipment.Primary.def.weaponTags.Any(x => x.Matches("GunSingleUse")))
+                        {
+                            compEquippable.PrimaryVerb.verbProps.ai_IsBuildingDestroyer = true;
+                        }
                     }
                     if (equipment.Primary.def.weaponTags.Any(x => x.Matches("grenade")))
                     {
