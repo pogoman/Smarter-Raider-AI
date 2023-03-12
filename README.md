@@ -1,21 +1,17 @@
-[![Build](https://github.com/kbatbouta/RimWorld-RocketMan/actions/workflows/main.yml/badge.svg)](https://github.com/kbatbouta/CAI-5000/blob/main/.github/workflows/main.yml) ![Version](https://img.shields.io/badge/Rimworld-1.4-brightgreen.svg)
----
-# CAI-5000 (Combat AI 5000)
-Advanced combat AI mod for RimWorld. Includes extremely fast fog of war system.
+# All Raids Can Breach
 
-![Alt text](https://github.com/kbatbouta/CAI-5000/blob/main/About/Preview.png?raw=true?raw=true)
+Tynan says Rimworld is a storyteller, not a skill test. This mod is for people who want it to be both.
 
-## Gameplay Features
-- Tactical pathfinding: Pawns will avoid LOS along the entire path they choose as well as any danger.
-- Killbox killer: pawns will avoid killboxes and other funnels. Pawns will dig if they find a path to be too dangerous.
-- Light speed reactions: pawns will react to enemies (detect) in less than 0.2 MS.
-- Tactical thinking: pawns will retreat, regroup, lure you into simple ambushes and they'll consider their armor and your ability to damage them. They do also consider when selecting an attack target the target's armor and the pawn ability to damage them. Pawns also have a much smarter cover selection system.
+All raids now have the ability to breach assuming they contain any pawns with weapons enabled for breaching as per mod settings. Please note this does not change the types of raiders that spawn, only adds breaching as an option to the raider decision making tree.
 
-[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/E1E62N5V8)
----
+Raiders can also sap if they have no breachers. Raiders will no longer choose to enter your killbox if they can sap or breach instead. Raiders will also not beeline to colonists like they used to, they will attack colonists within LOS but if none available will focus on pillaging the colony.
 
-## Technical Details And Features
-TODO
+Due to all of the above it is much harder to 'Game' the AI. Strategic defence of the whole colony and not just one entrance is very important.
 
-## Development Quick Start
-TODO
+Compatibility:
+
+Should be compatible with most unless they directly interfere with the breach and sap AI.
+
+Walls are Solid: This mod will technically work with Walls are Solid but i have flagged as incompatible because the raiders aren't tweaked to handle the lower wall damage, meaning you will have a raider spend a very long time trying to sap your wall with his sniper rifle.
+
+Combat Extended: Compatible, however a lot of tweaks were made to maintain performance, which included disabling some very old slow running CE code and fixing some CE side bugs with turret avoid grid generation. The side effect of the bonus performance is CE raiders tend to friendly fire more. You can choose to disable these tweaks in the mod options at your own risk.
