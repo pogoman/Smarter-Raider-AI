@@ -23,8 +23,14 @@ namespace PogoAI.Patches
                     __result = true;
                     return false;
                 }
+
                 //Check weapon min range in case of splash (cheaper than original code)
-                var effective = __instance.verb.EffectiveRange * __instance.verb.EffectiveRange / 5;
+                float modifier = 5;
+                if (__instance.verb.EquipmentCompSource?.parent?.def?.weaponTags?.Any(x => x.Matches("grenade")) ?? false)
+                {
+                    modifier = 1.5f;
+                }
+                var effective = __instance.verb.EffectiveRange * __instance.verb.EffectiveRange / modifier;
                 __result = __instance.target.Position.DistanceToSquared(c) > effective;
 
                 //Check for nearby reserved firingpos in case of FF in CE (mainly a problem for cents)
