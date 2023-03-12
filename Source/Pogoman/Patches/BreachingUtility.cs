@@ -132,7 +132,7 @@ namespace PogoAI.Patches
                     }
                 }
 
-                var breachWeapons = PogoSettings.DEFAULT_BREACH_WEAPONS.Replace(" ", string.Empty).Split(',');
+                var breachWeapons = Init.settings.BreachWeapons.Replace(" ", string.Empty).Split(',');
                 if (breachWeapons.Any(x => weapon.Matches(x)))
                 {
                     if (Init.combatExtended)
