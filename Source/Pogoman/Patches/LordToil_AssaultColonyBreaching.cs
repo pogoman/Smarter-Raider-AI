@@ -39,7 +39,7 @@ namespace PogoAI.Patches
                         using (PawnPath pathNoBreach = __instance.Map.pathFinder.FindPath(checkWith.Position, target.Thing.Position,
                         TraverseParms.For(checkWith, Danger.Deadly, TraverseMode.ByPawn, false, true, false), PathEndMode.OnCell, null))
                         {
-                            Log.Message($"nobreac: {breachPath.TotalCost} walk cost {pathNoBreach.TotalCost}");
+                            //Log.Message($"nobreac: {breachPath.TotalCost} walk cost {pathNoBreach.TotalCost}");
                             if (Math.Abs(breachPath.TotalCost - pathNoBreach.TotalCost) < 1000)
                             {
                                 foreach (var pawn in __instance.lord.ownedPawns)

@@ -124,20 +124,12 @@ namespace PogoAI.Patches
 
                 var weapon = compEquippable.ToString();
 
-                if (Init.combatExtended)
-                {
-                    if (weapon.Matches("flame"))
-                    {
-                        return false;
-                    }
-                }
-
                 var breachWeapons = Init.settings.BreachWeapons.Replace(" ", string.Empty).Split(',');
                 if (breachWeapons.Any(x => weapon.Matches(x)))
                 {
                     if (Init.combatExtended)
                     {
-                        if (new string[] { "inferno", "blast", "thermal", "thump" }.Any(
+                        if (new string[] { "inferno", "charge blast", "thermal", "thump" }.Any(
                             x => weapon.Matches(x)))
                         {
                             if (!pawn.inventory.innerContainer.Any(x => x.ToString().Matches("ammo")))

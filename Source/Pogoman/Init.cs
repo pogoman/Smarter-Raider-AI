@@ -12,7 +12,7 @@ namespace PogoAI
 {
     public class PogoSettings : ModSettings
     {
-        public const string DEFAULT_BREACH_WEAPONS = "bomb, concussion, frag, rocket, inferno, blast, thermal, thump";
+        public const string DEFAULT_BREACH_WEAPONS = "stickbomb, concussion, frag, rocket, inferno, chargeblast, thermal, thump";
 
         public string BreachWeapons = DEFAULT_BREACH_WEAPONS;
         public bool CombatExtendedCompatPerf = true;
@@ -45,7 +45,7 @@ namespace PogoAI
             base.DoSettingsWindowContents(inRect);
             Listing_Standard listingStandard = new Listing_Standard();
             listingStandard.Begin(inRect);    
-            listingStandard.AddLabeledTextField("Allowed Breach Weapons:\n(comma separated, case insensitive, partial match)", ref settings.BreachWeapons, 0.25f, 60);
+            listingStandard.AddLabeledTextField("Allowed Breach Weapons:\n(comma separated, case insensitive, partial match, no spaces)", ref settings.BreachWeapons, 0.25f, 60);
 
             if (combatExtended)
             {
