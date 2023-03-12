@@ -35,7 +35,7 @@ namespace PogoAI.Patches
                         var reservations = __instance.breachingGrid.map.pawnDestinationReservationManager.reservedDestinations[__instance.verb.Caster.Faction].list;
                         foreach (var reservation in reservations)
                         {
-                            if (reservation.claimant.mindState.duty.def == DutyDefOf.Breaching)
+                            if (reservation.claimant?.mindState?.duty?.def == DutyDefOf.Breaching)
                             {
                                 var num = (float)(c - reservation.target).LengthHorizontalSquared;
                                 if (num < 100f && InFiringLine(c, reservation.target, __instance.target.Position))
