@@ -1,17 +1,12 @@
 ﻿using HarmonyLib;
+using PogoAI.Extensions;
 using RimWorld;
 using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using UnityEngine;
-using UnityEngine.UIElements;
 using Verse;
-using Verse.AI;
-using Verse.AI.Group;
 using static RimWorld.BreachingUtility;
 using static UnityEngine.GraphicsBuffer;
+using static Verse.AI.ReservationManager;
 
 namespace PogoAI.Patches
 {
@@ -20,12 +15,66 @@ namespace PogoAI.Patches
         [HarmonyPatch(typeof(BreachRangedCastPositionFinder), "SafeForRangedCast")]
         static class BreachRangedCastPositionFinder_SafeForRangedCast
         {
+            //Everything here needs to be efficient, called 100000s times
             static bool Prefix(IntVec3 c, ref bool __result, BreachRangedCastPositionFinder __instance)
             {
-                CellRect occupiedRect = CellRect.SingleCell(__instance.target.Position);
-                var distance = occupiedRect.ClosestDistSquaredTo(c);
-                var squaredEffectiveThird = __instance.verb.EffectiveRange * __instance.verb.EffectiveRange / 4;
-                __result = distance > squaredEffectiveThird;
+                if (__instance.verb == null)
+                {
+                    __result = true;
+                    return false;
+                }
+                //Check weapon min range in case of splash (cheaper than original code)
+                var effective = __instance.verb.EffectiveRange * __instance.verb.EffectiveRange / 5;
+                __result = __instance.target.Position.DistanceToSquared(c) > effective;
+
+                //Check for nearby reserved firingpos in case of FF in CE (mainly a problem for cents)
+                if (__result && __instance.verb.EffectiveRange > 30)
+                {
+                    if (__instance.breachingGrid.map.pawnDestinationReservationManager.reservedDestinations.ContainsKey(__instance.verb.Caster.Faction))
+                    {
+                        var reservations = __instance.breachingGrid.map.pawnDestinationReservationManager.reservedDestinations[__instance.verb.Caster.Faction].list;
+                        foreach (var reservation in reservations)
+                        {
+                            if (reservation.claimant.mindState.duty.def == DutyDefOf.Breaching)
+                            {
+                                var num = (float)(c - reservation.target).LengthHorizontalSquared;
+                                if (num < 100f && InFiringLine(c, reservation.target, __instance.target.Position))
+                                {
+                                    __result = false;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                return false;
+            }
+
+            static bool InFiringLine(IntVec3 c, IntVec3 firingPos, IntVec3 breachTarget)
+            {
+                var dxc = c.x - firingPos.x;
+                var dyc = c.y - firingPos.y;
+
+                var dxl = breachTarget.x - firingPos.x;
+                var dyl = breachTarget.y - firingPos.y;
+
+                var cross = dxc * dyl - dyc * dxl;
+                if (Math.Abs(cross) < 3)
+                {
+                    if (Math.Abs(dxl) >= Math.Abs(dyl))
+                    {
+                        return dxl > 0 ?
+                          firingPos.x <= c.x && c.x <= breachTarget.x :
+                          breachTarget.x <= c.x && c.x <= firingPos.x;
+                    }
+                    else
+                    {
+                        return dyl > 0 ?
+                          firingPos.y <= c.y && c.y <= breachTarget.y :
+                          breachTarget.y <= c.y && c.y <= firingPos.y;
+                    }
+                }
                 return false;
             }
         }
@@ -73,32 +122,42 @@ namespace PogoAI.Patches
                     return false;
                 }
 
+                var weapon = compEquippable.ToString();
+
                 if (Init.combatExtended)
                 {
-                    if (compEquippable.ToString().IndexOf("flame", StringComparison.OrdinalIgnoreCase) >= 0)
+                    if (weapon.Matches("flame"))
                     {
                         return false;
                     }
                 }
+
                 var breachWeapons = PogoSettings.DEFAULT_BREACH_WEAPONS.Replace(" ", string.Empty).Split(',');
-                if (breachWeapons.Any(x => compEquippable.ToString().IndexOf(x, StringComparison.OrdinalIgnoreCase) >= 0))
+                if (breachWeapons.Any(x => weapon.Matches(x)))
                 {
                     if (Init.combatExtended)
                     {
-                        if (new string[] { "Inferno", "Blast", "Thermal", "Thump" }.Any(
-                            x => compEquippable.ToString().IndexOf(x, StringComparison.OrdinalIgnoreCase) >= 0))
+                        if (new string[] { "inferno", "blast", "thermal", "thump" }.Any(
+                            x => weapon.Matches(x)))
                         {
-                            if (!pawn.inventory.innerContainer.Any(x => x.ToString().Contains("Ammo")))
+                            if (!pawn.inventory.innerContainer.Any(x => x.ToString().Matches("ammo")))
                             {
                                 return false;
                             }
                         }
                     }
-                    __result = compEquippable.PrimaryVerb;
-                    if (compEquippable.PrimaryVerb.verbProps.ai_IsBuildingDestroyer && !pawn.RaceProps.IsMechanoid)
+
+                    //These two statements ensure rockets are fired first and grenadiers dont get caught in explosion
+                    if (equipment.Primary.def.weaponTags.Any(x => x.Matches("GunSingleUse")) && !compEquippable.PrimaryVerb.verbProps.ai_IsBuildingDestroyer)
+                    {
+                        compEquippable.PrimaryVerb.verbProps.ai_IsBuildingDestroyer = true;
+                    }
+                    if (equipment.Primary.def.weaponTags.Any(x => x.Matches("grenade")))
                     {
                         compEquippable.PrimaryVerb.verbProps.ai_IsBuildingDestroyer = false;
                     }
+
+                    __result = compEquippable.PrimaryVerb;                    
                     return false;
                 }
 

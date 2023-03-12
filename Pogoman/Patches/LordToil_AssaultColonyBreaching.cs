@@ -15,7 +15,7 @@ namespace PogoAI.Patches
         {
             static void Postfix(RimWorld.LordToil_AssaultColonyBreaching __instance)
             {
-                __instance.Data.maxRange = 64f;
+                __instance.Data.maxRange = 40f;
             }
 
             static bool Prefix(RimWorld.LordToil_AssaultColonyBreaching __instance)
@@ -32,12 +32,14 @@ namespace PogoAI.Patches
                     }
                     Pawn checkWith;
                     __instance.lord.ownedPawns.TryRandomElement<Pawn>(out checkWith);
-                    using (PawnPath breachPath = __instance.Map.pathFinder.FindPath(__instance.Data.breachStart, __instance.Data.breachDest,
+                    var target = __instance.Map.attackTargetsCache.TargetsHostileToFaction(checkWith.Faction).First();
+                    using (PawnPath breachPath = __instance.Map.pathFinder.FindPath(checkWith.Position, target.Thing.Position,
                         TraverseParms.For(checkWith, Danger.Deadly, TraverseMode.PassAllDestroyableThings, false, true, false), PathEndMode.OnCell, null))
                     {
-                        using (PawnPath pathNoBreach = __instance.Map.pathFinder.FindPath(__instance.Data.breachStart, __instance.Data.breachDest,
+                        using (PawnPath pathNoBreach = __instance.Map.pathFinder.FindPath(checkWith.Position, target.Thing.Position,
                         TraverseParms.For(checkWith, Danger.Deadly, TraverseMode.ByPawn, false, true, false), PathEndMode.OnCell, null))
                         {
+                            Log.Message($"nobreac: {breachPath.TotalCost} walk cost {pathNoBreach.TotalCost}");
                             if (Math.Abs(breachPath.TotalCost - pathNoBreach.TotalCost) < 1000)
                             {
                                 foreach (var pawn in __instance.lord.ownedPawns)
