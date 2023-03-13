@@ -27,14 +27,16 @@ namespace PogoAI.Patches
                 Thing attackTarget = null;
                 if (!intVec.IsValid)
                 {
-                    if (!pawn.Map.attackTargetsCache.TargetsHostileToFaction(pawn.Faction).Any(x => !x.ThreatDisabled(pawn)))
+                    var pawnTargets = pawn.Map.attackTargetsCache.TargetsHostileToFaction(pawn.Faction).Where(x => !x.ThreatDisabled(pawn)).Select(x => x.Thing);
+                    var buildingTargets = pawn.Map.listerBuildings.allBuildingsColonist.Where(x => x.def.designationCategory?.defName != "Structure"
+                        && x.def.designationCategory?.defName != "Security" && !x.def.IsFrame && x.HitPoints > 0);
+                    
+                    if (!buildingTargets.TryRandomElement(out attackTarget))
                     {
-                        return false;
-                    }
-                    if (!pawn.Map.listerBuildings.allBuildingsColonist.Where(x => x.def != ThingDefOf.Wall 
-                    && x.def != ThingDefOf.TrapSpike).TryRandomElement(out attackTarget))
-                    {
-                        return false;
+                        if (!pawnTargets.TryRandomElement(out attackTarget))
+                        {
+                            return false;
+                        }
                     }
 
                     intVec = attackTarget.Position;
