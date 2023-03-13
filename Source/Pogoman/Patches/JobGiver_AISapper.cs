@@ -24,14 +24,15 @@ namespace PogoAI.Patches
                     pawn.GetLord().Notify_ReachedDutyLocation(pawn);
                     return false;
                 }
+                Thing attackTarget = null;
                 if (!intVec.IsValid)
                 {
                     if (!pawn.Map.attackTargetsCache.TargetsHostileToFaction(pawn.Faction).Any(x => !x.ThreatDisabled(pawn)))
                     {
                         return false;
                     }
-                    Thing attackTarget;
-                    if (!pawn.Map.listerThings.AllThings.Where(x => x.Faction == Faction.OfPlayer).TryRandomElement(out attackTarget))
+                    if (!pawn.Map.listerBuildings.allBuildingsColonist.Where(x => x.def != ThingDefOf.Wall 
+                    && x.def != ThingDefOf.TrapSpike).TryRandomElement(out attackTarget))
                     {
                         return false;
                     }
@@ -49,7 +50,7 @@ namespace PogoAI.Patches
                 {
                     IntVec3 cellBeforeBlocker;
                     Thing thing = pawnPath.FirstBlockingBuilding(out cellBeforeBlocker, pawn);
-                    //Log.Message($"tuned: pawn {pawn} job {pawn.CurJob} start {pawnPath.FirstNode} finish {pawnPath.LastNode} cost {pawnPath.TotalCost} thing {thing?.def}");
+                    //Log.Message($"tuned: pawn {pawn} job {pawn.CurJob} start {pawnPath.FirstNode} finish {pawnPath.LastNode} cost {pawnPath.TotalCost} thing {thing?.def} at: {attackTarget}");
                     if (thing != null)
                     {
                         Job job = DigUtility.PassBlockerJob(pawn, thing, cellBeforeBlocker, __instance.canMineMineables, __instance.canMineNonMineables);
