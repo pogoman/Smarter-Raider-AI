@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Verse.AI;
 using Verse;
 using Verse.AI.Group;
+using Unity.Baselib.LowLevel;
 
 namespace PogoAI.Patches
 {
@@ -29,8 +30,8 @@ namespace PogoAI.Patches
                 {
                     var pawnTargets = pawn.Map.attackTargetsCache.TargetsHostileToFaction(pawn.Faction).Where(x => !x.ThreatDisabled(pawn)).Select(x => x.Thing);
                     var buildingTargets = pawn.Map.listerBuildings.allBuildingsColonist.Where(x => x.def.designationCategory?.defName != "Structure"
-                        && x.def.designationCategory?.defName != "Security" && !x.def.IsFrame && x.HitPoints > 0);
-                    
+                        && x.def.designationCategory?.defName != "Security" && !x.def.IsFrame && x.HitPoints > 0 && x.def.altitudeLayer != AltitudeLayer.Conduits);                    
+
                     if (!buildingTargets.TryRandomElement(out attackTarget))
                     {
                         if (!pawnTargets.TryRandomElement(out attackTarget))
