@@ -47,7 +47,7 @@ namespace PogoAI.Patches
                     return false;
                 }
 
-                var customTuning = new PathFinderCostTuning() { costBlockedWallExtraForNaturalWalls = 1000 };
+                var customTuning = new PathFinderCostTuning() { costOffLordWalkGrid = 1, costBlockedWallBase = 1000, costBlockedWallExtraPerHitPoint = 1 };
                 using (PawnPath pawnPath = pawn.Map.pathFinder.FindPath(pawn.Position, intVec,
                     TraverseParms.For(pawn, Danger.Deadly, TraverseMode.PassAllDestroyableThings, false, true, false), PathEndMode.OnCell, customTuning))
                 {
