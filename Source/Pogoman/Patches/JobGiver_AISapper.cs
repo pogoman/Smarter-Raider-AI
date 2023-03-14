@@ -28,7 +28,8 @@ namespace PogoAI.Patches
                 Thing attackTarget = null;
                 if (!intVec.IsValid)
                 {
-                    var pawnTargets = pawn.Map.attackTargetsCache.TargetsHostileToFaction(pawn.Faction).Where(x => !x.ThreatDisabled(pawn)).Select(x => x.Thing);
+                    var pawnTargets = pawn.Map.attackTargetsCache.TargetsHostileToFaction(pawn.Faction).Where(x => !x.ThreatDisabled(pawn) 
+                        && x.Thing.Faction == Faction.OfPlayer).Select(x => x.Thing);
                     var buildingTargets = pawn.Map.listerBuildings.allBuildingsColonist.Where(x => x.def.designationCategory?.defName != "Structure"
                         && x.def.designationCategory?.defName != "Security" && !x.def.IsFrame && x.HitPoints > 0 && x.def.altitudeLayer != AltitudeLayer.Conduits);                    
 
