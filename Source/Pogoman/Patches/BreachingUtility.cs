@@ -5,8 +5,6 @@ using System;
 using System.Linq;
 using Verse;
 using static RimWorld.BreachingUtility;
-using static UnityEngine.GraphicsBuffer;
-using static Verse.AI.ReservationManager;
 
 namespace PogoAI.Patches
 {

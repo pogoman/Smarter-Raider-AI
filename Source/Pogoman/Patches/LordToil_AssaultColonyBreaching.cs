@@ -18,6 +18,18 @@ namespace PogoAI.Patches
                 __instance.Data.maxRange = 40f;
             }
 
+            static void EndBreaching(RimWorld.LordToil_AssaultColonyBreaching __instance)
+            {
+                foreach (var pawn in __instance.lord.ownedPawns)
+                {
+                    if (pawn.mindState.duty.def == DutyDefOf.Breaching || pawn.mindState.duty.def == DutyDefOf.Escort)
+                    {
+                        pawn.mindState.duty = new PawnDuty(DutyDefOf.AssaultColony);
+                    }
+                }
+                __instance.Data.currentTarget = null;
+            }
+
             static bool Prefix(RimWorld.LordToil_AssaultColonyBreaching __instance)
             {
                 if (!__instance.lord.ownedPawns.Any<Pawn>())
@@ -26,33 +38,34 @@ namespace PogoAI.Patches
                 }
                 if (__instance.Data?.breachDest != null && __instance.Data.breachDest.IsValid)
                 {
-                    if (__instance.Data.currentTarget == null)
+                    Pawn checkWith;
+                    __instance.lord.ownedPawns.Where(x => x.mindState.duty.def == DutyDefOf.Breaching).TryRandomElement<Pawn>(out checkWith);
+                    if (__instance.Data.currentTarget == null && checkWith != null)
                     {
                         return false;
-                    }
-                    Pawn checkWith;
-                    __instance.lord.ownedPawns.TryRandomElement<Pawn>(out checkWith);
-                    var target = __instance.Map.attackTargetsCache.TargetsHostileToFaction(checkWith.Faction).First();
-                    using (PawnPath breachPath = __instance.Map.pathFinder.FindPath(checkWith.Position, target.Thing.Position,
-                        TraverseParms.For(checkWith, Danger.Deadly, TraverseMode.PassAllDestroyableThings, false, true, false), PathEndMode.OnCell, null))
+                    }                    
+                    if (checkWith != null)
                     {
-                        using (PawnPath pathNoBreach = __instance.Map.pathFinder.FindPath(checkWith.Position, target.Thing.Position,
-                        TraverseParms.For(checkWith, Danger.Deadly, TraverseMode.ByPawn, false, true, false), PathEndMode.OnCell, null))
+                        var target = __instance.Map.attackTargetsCache.TargetsHostileToFaction(checkWith.Faction).First();
+                        using (PawnPath breachPath = __instance.Map.pathFinder.FindPath(checkWith.Position, target.Thing.Position,
+                            TraverseParms.For(checkWith, Danger.Deadly, TraverseMode.PassAllDestroyableThings, false, true, false), PathEndMode.OnCell, null))
                         {
-                            //Log.Message($"nobreac: {breachPath.TotalCost} walk cost {pathNoBreach.TotalCost}");
-                            if (Math.Abs(breachPath.TotalCost - pathNoBreach.TotalCost) < 1000)
+                            using (PawnPath pathNoBreach = __instance.Map.pathFinder.FindPath(checkWith.Position, target.Thing.Position,
+                            TraverseParms.For(checkWith, Danger.Deadly, TraverseMode.ByPawn, false, true, false), PathEndMode.OnCell, null))
                             {
-                                foreach (var pawn in __instance.lord.ownedPawns)
+                                //Log.Message($"nobreac: {breachPath.TotalCost} walk cost {pathNoBreach.TotalCost}");
+                                if (Math.Abs(breachPath.TotalCost - pathNoBreach.TotalCost) < 1000)
                                 {
-                                    if (pawn.mindState.duty.def == DutyDefOf.Breaching || pawn.mindState.duty.def == DutyDefOf.Escort)
-                                    {
-                                        pawn.mindState.duty = new PawnDuty(DutyDefOf.AssaultColony);
-                                    }
+                                    EndBreaching(__instance);
+                                    return false;
                                 }
-                                __instance.Data.currentTarget = null;
-                                return false;
                             }
                         }
+                    }
+                    else
+                    {
+                        EndBreaching(__instance);
+                        return false;
                     }
                 }
 
