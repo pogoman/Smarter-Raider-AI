@@ -7,6 +7,7 @@ using System.Reflection;
 using Verse;
 using Verse.AI;
 using UnityEngine;
+using PogoAI.Extensions;
 
 namespace PogoAI.Patches.CE
 {
@@ -59,8 +60,11 @@ namespace PogoAI.Patches.CE
                 return target;
             }
 
-            static bool Prefix(IntVec3 root, LocalTargetInfo targ, out ShootLine resultingLine, Verb __instance, ref bool __result)
+            static bool Prefix(IntVec3 root, LocalTargetInfo targ, ref ShootLine resultingLine, Verb __instance, ref bool __result)
             {
+                if (__instance.EquipmentSource?.def?.ToString().Matches("Mortar") ?? false) {
+                    return true;
+                }
                 __result = __instance.TryFindShootLineFromTo(root, targ, out resultingLine);
                 return false;
             }
