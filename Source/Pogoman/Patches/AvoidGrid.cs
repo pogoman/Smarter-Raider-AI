@@ -71,12 +71,11 @@ namespace PogoAI.Patches
                     for (int i = num < 1f ? 0 : GenRadial.NumCellsInRadius(num); i < num2; i++)
                     {
                         IntVec3 intVec = pos + GenRadial.RadialPattern[i];
-                        if (__instance.grid[intVec] == 0)
+                        if (intVec.InBounds(map) && intVec.WalkableByNormal(map) 
+                            && __instance.grid[intVec] == 0
+                            && GenSight.LineOfSight(intVec, pos, map, true, null, 0, 0))
                         {
-                            if (intVec.InBounds(map) && intVec.WalkableByNormal(map) && GenSight.LineOfSight(intVec, pos, map, true, null, 0, 0))
-                            {
-                                __instance.IncrementAvoidGrid(intVec, 45);
-                            }
+                            __instance.IncrementAvoidGrid(intVec, 45);
                         }
                     }
                 }
