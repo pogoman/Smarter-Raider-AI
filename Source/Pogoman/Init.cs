@@ -49,7 +49,7 @@ namespace PogoAI
 
             if (combatExtended)
             {
-                listingStandard.CheckboxLabeled("Enable Combat Extended Compatibility Performance fixes\nNote: AI will friendly fire more but performance is much better. Requires game restart.",
+                listingStandard.CheckboxLabeled("Enable Combat Extended Compatibility Performance fixes (recommeded to leave on)\nRequires game restart.",
                     ref settings.CombatExtendedCompatPerf);
             }
             listingStandard.End();
@@ -58,7 +58,7 @@ namespace PogoAI
 
         public override string SettingsCategory()
         {
-            return "All Raids Can Breach";
+            return "Smarter Raider AI";
         }
     }
 }
