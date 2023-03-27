@@ -1,24 +1,35 @@
 ﻿using HarmonyLib;
+using Mono.Unix.Native;
 using RimWorld;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography;
+using System.Threading;
 using Unity.Baselib.LowLevel;
+using UnityEngine;
 using Verse;
+using Verse.AI;
 
 namespace PogoAI.Patches
 {
     internal class AvoidGrid
     {
+
         [HarmonyPatch(typeof(Verse.AI.AvoidGrid), "Regenerate")]
         static class AvoidGrid_Regenerate
         {
+            static Verse.AI.AvoidGrid instance;
+            static int counter = 0;
+
             static bool Prefix(Verse.AI.AvoidGrid __instance)
             {
+                instance = __instance;
                 __instance.gridDirty = false;
                 __instance.grid.Clear(0);
-                var draftedColonists = __instance.map.PlayerPawnsForStoryteller.Where(x => x.Drafted);
+                counter = 0;
+                var draftedColonists = __instance.map.PlayerPawnsForStoryteller.Where(x => x.Drafted && x.equipment?.PrimaryEq != null);
                 foreach (var pawn in draftedColonists)
                 {
                     PrintAvoidGridAroundThing(__instance, pawn.Map, pawn.Position, pawn.equipment.PrimaryEq.PrimaryVerb, true);
@@ -39,12 +50,14 @@ namespace PogoAI.Patches
                             Building_TurretGun building_TurretGun = allBuildingsColonist[i] as Building_TurretGun;
                             if (building_TurretGun != null)
                             {
-                                __instance.PrintAvoidGridAroundTurret(building_TurretGun);
+                                PrintAvoidGridAroundThing(__instance, building_TurretGun.Map,
+                                    building_TurretGun.Position, building_TurretGun.GunCompEq.PrimaryVerb);
                             }
                         }
                     }
                 }
                 __instance.ExpandAvoidGridIntoEdifices();
+                //Log.Message($"Count: {counter}");
                 return false;
             }
 
@@ -66,18 +79,30 @@ namespace PogoAI.Patches
                     posList.Add(new IntVec3(position.x, position.y, position.z - 1));
                     posList.RemoveAll(x => x.GetRegion(map, RegionType.Set_Passable) == null);
                 }
+                posList = new List<IntVec3>() { position };
                 foreach (var pos in posList)
                 {
-                    for (int i = num < 1f ? 0 : GenRadial.NumCellsInRadius(num); i < num2; i++)
+                    for (int i = num2; i > (num < 1f ? 0 : GenRadial.NumCellsInRadius(num)); i--)
                     {
                         IntVec3 intVec = pos + GenRadial.RadialPattern[i];
-                        if (intVec.InBounds(map) && intVec.WalkableByNormal(map) 
+                        if (intVec.InBounds(map) && intVec.WalkableByNormal(map)
                             && __instance.grid[intVec] == 0
                             && GenSight.LineOfSight(intVec, pos, map, true, null, 0, 0))
                         {
-                            __instance.IncrementAvoidGrid(intVec, 45);
+                            counter++;
+                            GenSight.PointsOnLineOfSight(intVec, pos, incrementAvoidGrid);
                         }
                     }
+                }
+            }
+
+            private static Action<IntVec3> incrementAvoidGrid = new Action<IntVec3>(IncrementAvoidGrid);
+
+            private static void IncrementAvoidGrid(IntVec3 cell)
+            {
+                if (instance.grid[cell] == 0)
+                {
+                    instance.IncrementAvoidGrid(cell, 45);
                 }
             }
         }
