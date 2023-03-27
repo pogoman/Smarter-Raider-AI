@@ -22,7 +22,7 @@ namespace PogoAI.Patches
             {
                 foreach (var pawn in __instance.lord.ownedPawns)
                 {
-                    if (pawn.mindState.duty.def == DutyDefOf.Breaching || pawn.mindState.duty.def == DutyDefOf.Escort)
+                    if (pawn.mindState.duty == null || pawn.mindState.duty.def == DutyDefOf.Breaching || pawn.mindState.duty.def == DutyDefOf.Escort)
                     {
                         pawn.mindState.duty = new PawnDuty(DutyDefOf.AssaultColony);
                     }
@@ -39,7 +39,7 @@ namespace PogoAI.Patches
                 if (__instance.Data?.breachDest != null && __instance.Data.breachDest.IsValid)
                 {
                     Pawn checkWith;
-                    __instance.lord.ownedPawns.Where(x => x.mindState.duty.def == DutyDefOf.Breaching).TryRandomElement<Pawn>(out checkWith);
+                    __instance.lord.ownedPawns.Where(x => x.mindState?.duty?.def == DutyDefOf.Breaching).TryRandomElement<Pawn>(out checkWith);
                     if (__instance.Data.currentTarget == null && checkWith != null)
                     {
                         return false;
