@@ -18,7 +18,6 @@ namespace PogoAI.Patches
         {
             static void Postfix(Pawn pawn)
             {
-                Log.Message($"pawn {pawn.Drafted}");
                 if (pawn.Drafted)
                 {
                     pawn.Map.avoidGrid.gridDirty = true;
