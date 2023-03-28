@@ -12,7 +12,12 @@
 		<li>Ludeon.RimWorld</li>
 		<li>Ludeon.RimWorld.Royalty</li>
 		<li>brrainz.harmony</li>
+		<li>Krkr.rule56</li>
 		<li>CETeam.CombatExtended</li>
 	</loadAfter>
+	<incompatibleWith>
+		<li>brrainz.carefulraids</li>
+		<li>brrainz.lineofsightfix</li>
+	</incompatibleWith>
 	<description>Tynan says Rimworld is a storyteller, not a skill test. This mod is for people who want it to be both.</description>
 </ModMetaData>
