@@ -29,9 +29,10 @@ namespace PogoAI.Patches
                 __instance.gridDirty = false;
                 __instance.grid.Clear(0);
                 counter = 0;
-                var draftedColonists = __instance.map.PlayerPawnsForStoryteller.Where(x => x.Drafted && x.equipment?.PrimaryEq != null);
+                var draftedColonists = __instance.map.PlayerPawnsForStoryteller.Where(x => 
+                    x.Drafted && x.equipment?.PrimaryEq != null && x.CurJobDef == JobDefOf.Wait_Combat);
                 foreach (var pawn in draftedColonists)
-                {
+                {                   
                     PrintAvoidGridAroundThing(__instance, pawn.Map, pawn.Position, pawn.equipment.PrimaryEq.PrimaryVerb, true);
                 }
                 List<Building> allBuildingsColonist = __instance.map.listerBuildings.allBuildingsColonist;
@@ -63,6 +64,9 @@ namespace PogoAI.Patches
 
             static void PrintAvoidGridAroundThing(Verse.AI.AvoidGrid __instance, Map map, IntVec3 pos, Verb verb, bool isPawn = false)
             {
+                if (verb.Caster.def.defName == "Turret_RocketswarmLauncher") {
+                    return;
+                }
                 float range = verb.verbProps.range;
                 if (verb.IsMeleeAttack)
                 {
