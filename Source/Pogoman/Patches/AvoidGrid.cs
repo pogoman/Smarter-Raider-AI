@@ -79,7 +79,6 @@ namespace PogoAI.Patches
                     posList.Add(new IntVec3(position.x, position.y, position.z - 1));
                     posList.RemoveAll(x => x.GetRegion(map, RegionType.Set_Passable) == null);
                 }
-                posList = new List<IntVec3>() { position };
                 foreach (var pos in posList)
                 {
                     for (int i = num2; i > (num < 1f ? 0 : GenRadial.NumCellsInRadius(num)); i--)
