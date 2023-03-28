@@ -14,7 +14,5 @@
         <li>brrainz.harmony</li>
         <li>CETeam.CombatExtended</li>
     </loadAfter>
-    <description>Tynan says Rimworld is a storyteller, not a skill test. This mod is for people who want it to be both. 
-	This mod focuses on reworking and prioritising the Rader AI decision making tree to be more in line with what a player would do, all whilst maintaining vanilla performance. This is done by leveraging the existing vanilla rimworld avoid grid used in smart raids and optimising it to work with player pawns as well (not just turrets).
-	</description>
+    <description>Tynan says Rimworld is a storyteller, not a skill test. This mod is for people who want it to be both. This mod focuses on reworking and prioritising the Rader AI decision making tree to be more in line with what a player would do, all whilst maintaining vanilla performance. This is done by leveraging the existing vanilla rimworld avoid grid used in smart raids and optimising it to work with player pawns as well (not just turrets).</description>
 </ModMetaData>
