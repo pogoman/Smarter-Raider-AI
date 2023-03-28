@@ -126,7 +126,7 @@ namespace PogoAI.Patches
                     pathCostCache.RemoveAll(x => x.Item4 == cellBeforeBlocker);
                     job = JobMaker.MakeJob(JobDefOf.Goto, intVec, 500, true);
                 }
-                job.expiryInterval = Rand.RangeInclusive(1800, 3600);
+                job.expiryInterval = Rand.RangeInclusive(450, 1800);
                 return job;
             }
         }
