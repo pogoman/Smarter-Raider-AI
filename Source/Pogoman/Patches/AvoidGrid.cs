@@ -100,10 +100,7 @@ namespace PogoAI.Patches
 
             private static void IncrementAvoidGrid(IntVec3 cell)
             {
-                if (instance.grid[cell] == 0)
-                {
-                    instance.IncrementAvoidGrid(cell, 45);
-                }
+                instance.IncrementAvoidGrid(cell, 45);
             }
         }
     }
