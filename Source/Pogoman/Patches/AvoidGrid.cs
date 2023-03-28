@@ -61,7 +61,7 @@ namespace PogoAI.Patches
                 return false;
             }
 
-            static void PrintAvoidGridAroundThing(Verse.AI.AvoidGrid __instance, Map map, IntVec3 position, Verb verb, bool isPawn = false)
+            static void PrintAvoidGridAroundThing(Verse.AI.AvoidGrid __instance, Map map, IntVec3 pos, Verb verb, bool isPawn = false)
             {
                 float range = verb.verbProps.range;
                 if (verb.IsMeleeAttack)
@@ -70,27 +70,17 @@ namespace PogoAI.Patches
                 }
                 float num = verb.verbProps.EffectiveMinRange(true);
                 int num2 = GenRadial.NumCellsInRadius(range);
-                var posList = new List<IntVec3>() { position };
-                if (isPawn)
+                for (int i = num2; i > (num < 1f ? 0 : GenRadial.NumCellsInRadius(num)); i--)
                 {
-                    posList.Add(new IntVec3(position.x + 1, position.y, position.z));
-                    posList.Add(new IntVec3(position.x - 1, position.y, position.z));
-                    posList.Add(new IntVec3(position.x, position.y, position.z + 1));
-                    posList.Add(new IntVec3(position.x, position.y, position.z - 1));
-                    posList.RemoveAll(x => x.GetRegion(map, RegionType.Set_Passable) == null);
-                }
-                foreach (var pos in posList)
-                {
-                    for (int i = num2; i > (num < 1f ? 0 : GenRadial.NumCellsInRadius(num)); i--)
+                    IntVec3 intVec = pos + GenRadial.RadialPattern[i];
+                    LocalTargetInfo targ = new LocalTargetInfo(intVec);
+                    ShootLine shootLine;
+                    if (intVec.InBounds(map) && intVec.WalkableByNormal(map)
+                        && __instance.grid[intVec] == 0
+                        && verb.TryFindShootLineFromTo(pos, targ, out shootLine))
                     {
-                        IntVec3 intVec = pos + GenRadial.RadialPattern[i];
-                        if (intVec.InBounds(map) && intVec.WalkableByNormal(map)
-                            && __instance.grid[intVec] == 0
-                            && GenSight.LineOfSight(intVec, pos, map, true, null, 0, 0))
-                        {
-                            counter++;
-                            GenSight.PointsOnLineOfSight(intVec, pos, incrementAvoidGrid);
-                        }
+                        counter++;
+                        GenSight.PointsOnLineOfSight(intVec, pos, incrementAvoidGrid);
                     }
                 }
             }

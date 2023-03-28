@@ -1,4 +1,5 @@
 ﻿using HarmonyLib;
+using PogoAI.Extensions;
 using RimWorld;
 using System;
 using System.Linq;
@@ -67,6 +68,10 @@ namespace PogoAI.Patches
                         EndBreaching(__instance);
                         return false;
                     }
+                }
+                if (__instance.useAvoidGrid && __instance.lord.ownedPawns.Any<Pawn>(x => x.def.ToString().Matches("centipede")))
+                {
+                    __instance.useAvoidGrid = false;
                 }
 
                 return true;
