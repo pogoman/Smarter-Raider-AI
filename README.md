@@ -1,15 +1,24 @@
 # Smarter Raider AI
-(Formally 'All Raids Can Breach')	
 Tynan says Rimworld is a storyteller, not a skill test. This mod is for people who want it to be both.
 
-All enemy pawns will now avoid areas your turrets or drafted pawns have line of sight to (leveraging and extending the avoid grid normally only used in smart raids). Yes this means no more killboxes. If there is no suitable path they will breach or sap. This also means opening one door where you have all your pawns waiting will not work either, unless the alternative pathways into your base are so tedious there literally is no other option, i.e. you are a mountain base with one entrance 10 tiles deep.
+This mod focuses on reworking and prioritising the Rader AI decision making tree to be more in line with what a player would do, all whilst attempting to maintain vanilla performance. This is done by leveraging the existing vanilla rimworld avoid grid used in smart raids and extending it to incorporate player pawns as well (not just turrets).
 
-All raids also now have the ability to breach assuming they contain any pawns with weapons enabled for breaching (see mod options). Default breach weapon keywords are "stickbomb, concussion, frag, rocket, inferno, chargeblast, thermal, thump". You may customise these but note if you are running CE and you choose weapon types with limited ammo the raiders may waste all their ammo on breaching. Also note this does not change the types of raiders that spawn, only adds breaching as an option to the raider decision making tree.
-
-Raiders will also not beeline to colonists like they used to, they will attack colonists within line of sight but if none available will focus on pillaging the colony.
+## Summary of main changes:
+- All enemy pawns will now avoid areas your turrets or drafted pawns have line of sight to (yes no more killboxes).
+Note: If a turret or pawn is engaged in a firefight the avoid grid will be temporarily disabled for that unit, so positions can still be overrun if there are more raiders than defenders. Trap killboxes will still work in the early game but not if your pawns have overwatch.
+- Any raider with a weapon defined as breachable (set in mod options), will now attempt to breach first (regardless of whether it is a breach or normal raid). By default these are weapons including the keywords "stickbomb, concussion, frag, rocket, inferno, chargeblast, thermal, thump". i.e. a raider carrying a doomsday will fire it at your walls if there is no better way into your base.
+- Raiders will prioritise pillaging and destroying colony buildings and will take the safest path to do this. If there is no safe path and they have no breachers then they will sap/attack walls in the safest locations.
 
 Due to all of the above it is much harder to 'Game' the AI. Strategic defence of the whole colony and not just one entrance is very important.
+
+## Compatibilities:
 
 Can add/remove from save without issue.
 
 Compatible with combat extended.
+
+Tentatively compatible with CAI (more testing required, may cause performance issues).
+
+(This mod must be loaded after both of the above.)
+
+Incompatible with Careful Raids.
