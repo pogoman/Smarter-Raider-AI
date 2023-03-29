@@ -70,10 +70,8 @@ namespace PogoAI.Patches
                             equip = (CompEquippable)building.GetType().GetProperty("GunCompEq").GetValue(building, null);
                             var powered = (bool)building.GetType().GetProperty("Active").GetValue(building, null);
                             var currentTarget = (LocalTargetInfo)building.GetType().GetProperty("CurrentTarget").GetValue(building, null);
-                            var isMannable = (bool)building.GetType().GetProperty("IsMannable").GetValue(building, null);
-                            var mannedByColonist = ((CompMannable)building.GetType().GetProperty("MannableComp").GetValue(building, null))?.MannedNow ?? false;
                             var emptyMagazine = (bool)building.GetType().GetProperty("EmptyMagazine").GetValue(building, null);
-                            threatCondition = powered && currentTarget == null && (!isMannable || mannedByColonist) && !emptyMagazine;
+                            threatCondition = powered && currentTarget == null && !emptyMagazine;
                         }
                         else
                         {
