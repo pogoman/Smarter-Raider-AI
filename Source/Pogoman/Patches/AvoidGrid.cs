@@ -68,7 +68,7 @@ namespace PogoAI.Patches
                     }
                 }
                 __instance.ExpandAvoidGridIntoEdifices();
-                Log.Message($"Count: {counter}");
+                //Log.Message($"Count: {counter}");
                 return false;
             }
 
@@ -95,7 +95,7 @@ namespace PogoAI.Patches
                     {
                         counter++;
                         incAmount = !isPawn ? 45 : 10;
-                        GenSight.PointsOnLineOfSight(intVec, pos, incrementAvoidGrid);
+                        GenSight.PointsOnLineOfSight(shootLine.Source, shootLine.Dest, incrementAvoidGrid);
                     }
                 }
             }
