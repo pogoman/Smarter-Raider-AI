@@ -15,15 +15,15 @@ using Verse.Noise;
 
 namespace PogoAI.Patches
 {
-    internal class AvoidGrid
+    public class AvoidGrid
     {
 
         [HarmonyPatch(typeof(Verse.AI.AvoidGrid), "Regenerate")]
-        static class AvoidGrid_Regenerate
+        public static class AvoidGrid_Regenerate
         {
             static Verse.AI.AvoidGrid instance;
             static int counter = 0;
-            static int incAmount = 45;
+            static int incAmount;
 
             static bool Prefix(Verse.AI.AvoidGrid __instance)
             {
@@ -31,12 +31,32 @@ namespace PogoAI.Patches
                 __instance.gridDirty = false;
                 __instance.grid.Clear(0);
                 counter = 0;
+                incAmount = 45;
+
+                //Corpses
+                var corpses = __instance.map.listerThings.ThingsInGroup(ThingRequestGroup.Corpse).Where(x => ((Corpse)x).Age < 1800 
+                    && (((Corpse)x).InnerPawn?.Faction?.HostileTo(Faction.OfPlayer) ?? false));
+                foreach (Corpse corpse in corpses)
+                {
+                    PrintAvoidGridAroundPos(__instance, __instance.map, corpse.Position, 1, 1000 * (1800 - corpse.Age) / 1800);
+                }
+
+                //Downed Raiders
+                var downed = __instance.map.mapPawns.SpawnedDownedPawns.Where(x => x.Faction.HostileTo(Faction.OfPlayer));
+                foreach (var raider in downed)
+                {
+                    PrintAvoidGridAroundPos(__instance, __instance.map, raider.Position, 1);
+                }
+
+                //Colonist Pawns
                 var draftedColonists = __instance.map.PlayerPawnsForStoryteller.Where(x => 
                     x.Drafted && x.equipment?.PrimaryEq != null && x.CurJobDef == JobDefOf.Wait_Combat && x.TargetCurrentlyAimingAt == null);
                 foreach (var pawn in draftedColonists)
                 {
-                    PrintAvoidGridAroundThing(__instance, pawn.Map, pawn.Position, pawn.equipment.PrimaryEq.PrimaryVerb, true);
+                    PrintAvoidGridLOSThing(__instance, pawn.Map, pawn.Position, pawn.equipment.PrimaryEq.PrimaryVerb, true);
                 }
+
+                //Turrets
                 List<Building> allBuildingsColonist = __instance.map.listerBuildings.allBuildingsColonist;
                 for (int i = 0; i < allBuildingsColonist.Count; i++)
                 {
@@ -63,7 +83,7 @@ namespace PogoAI.Patches
                         }
                         if (threatCondition)
                         {
-                            PrintAvoidGridAroundThing(__instance, building.Map, building.Position, equip.PrimaryVerb);
+                            PrintAvoidGridLOSThing(__instance, building.Map, building.Position, equip.PrimaryVerb);
                         }
                     }
                 }
@@ -72,7 +92,17 @@ namespace PogoAI.Patches
                 return false;
             }
 
-            static void PrintAvoidGridAroundThing(Verse.AI.AvoidGrid __instance, Map map, IntVec3 pos, Verb verb, bool isPawn = false)
+            public static void PrintAvoidGridAroundPos(Verse.AI.AvoidGrid __instance, Map map, IntVec3 pos, int radius, int inc = 45)
+            {
+                for (int i = 0; i < GenRadial.NumCellsInRadius(radius); i++)
+                {
+                    IntVec3 intVec = pos + GenRadial.RadialPattern[i];
+                    instance.IncrementAvoidGrid(intVec, inc);
+                }
+            }
+
+
+            static void PrintAvoidGridLOSThing(Verse.AI.AvoidGrid __instance, Map map, IntVec3 pos, Verb verb, bool isPawn = false)
             {
                 if (verb.Caster.def.defName == "Turret_RocketswarmLauncher") {
                     return;
