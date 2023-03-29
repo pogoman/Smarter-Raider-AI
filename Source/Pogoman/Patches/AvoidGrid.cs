@@ -11,6 +11,7 @@ using Unity.Baselib.LowLevel;
 using UnityEngine;
 using Verse;
 using Verse.AI;
+using Verse.Noise;
 
 namespace PogoAI.Patches
 {
@@ -22,6 +23,7 @@ namespace PogoAI.Patches
         {
             static Verse.AI.AvoidGrid instance;
             static int counter = 0;
+            static int incAmount = 45;
 
             static bool Prefix(Verse.AI.AvoidGrid __instance)
             {
@@ -30,9 +32,9 @@ namespace PogoAI.Patches
                 __instance.grid.Clear(0);
                 counter = 0;
                 var draftedColonists = __instance.map.PlayerPawnsForStoryteller.Where(x => 
-                    x.Drafted && x.equipment?.PrimaryEq != null && x.CurJobDef == JobDefOf.Wait_Combat);
+                    x.Drafted && x.equipment?.PrimaryEq != null && x.CurJobDef == JobDefOf.Wait_Combat && x.TargetCurrentlyAimingAt == null);
                 foreach (var pawn in draftedColonists)
-                {                   
+                {
                     PrintAvoidGridAroundThing(__instance, pawn.Map, pawn.Position, pawn.equipment.PrimaryEq.PrimaryVerb, true);
                 }
                 List<Building> allBuildingsColonist = __instance.map.listerBuildings.allBuildingsColonist;
@@ -40,25 +42,33 @@ namespace PogoAI.Patches
                 {
                     if (allBuildingsColonist[i].def.building.ai_combatDangerous)
                     {
+                        CompEquippable equip;
+                        var threatCondition = false;
+                        var building = allBuildingsColonist[i];
                         if (Init.combatExtended)
                         {
-                            var building = allBuildingsColonist[i];
-                            CompEquippable equip = (CompEquippable)building.GetType().GetProperty("GunCompEq").GetValue(building, null);
-                            PrintAvoidGridAroundThing(__instance, building.Map, building.Position, equip.PrimaryVerb);
+                            equip = (CompEquippable)building.GetType().GetProperty("GunCompEq").GetValue(building, null);
+                            var powered = (bool)building.GetType().GetProperty("Active").GetValue(building, null);
+                            var currentTarget = (LocalTargetInfo)building.GetType().GetProperty("CurrentTarget").GetValue(building, null);
+                            var isMannable = (bool)building.GetType().GetProperty("IsMannable").GetValue(building, null);
+                            var mannedByColonist = ((CompMannable)building.GetType().GetProperty("MannableComp").GetValue(building, null)).MannedNow;
+                            var emptyMagazine = (bool)building.GetType().GetProperty("EmptyMagazine").GetValue(building, null);
+                            threatCondition = powered && currentTarget == null && (!isMannable || mannedByColonist) && !emptyMagazine;
                         }
                         else
                         {
                             Building_TurretGun building_TurretGun = allBuildingsColonist[i] as Building_TurretGun;
-                            if (building_TurretGun != null)
-                            {
-                                PrintAvoidGridAroundThing(__instance, building_TurretGun.Map,
-                                    building_TurretGun.Position, building_TurretGun.GunCompEq.PrimaryVerb);
-                            }
+                            equip = building_TurretGun.GunCompEq;
+                            threatCondition = building_TurretGun.powerComp.PowerOn && building_TurretGun.TargetCurrentlyAimingAt == null;
+                        }
+                        if (threatCondition)
+                        {
+                            PrintAvoidGridAroundThing(__instance, building.Map, building.Position, equip.PrimaryVerb);
                         }
                     }
                 }
                 __instance.ExpandAvoidGridIntoEdifices();
-                //Log.Message($"Count: {counter}");
+                Log.Message($"Count: {counter}");
                 return false;
             }
 
@@ -84,6 +94,7 @@ namespace PogoAI.Patches
                         && verb.TryFindShootLineFromTo(pos, targ, out shootLine))
                     {
                         counter++;
+                        incAmount = !isPawn ? 45 : 10;
                         GenSight.PointsOnLineOfSight(intVec, pos, incrementAvoidGrid);
                     }
                 }
@@ -93,7 +104,7 @@ namespace PogoAI.Patches
 
             private static void IncrementAvoidGrid(IntVec3 cell)
             {
-                instance.IncrementAvoidGrid(cell, 45);
+                instance.IncrementAvoidGrid(cell, incAmount);
             }
         }
     }
