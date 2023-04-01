@@ -20,7 +20,7 @@ namespace PogoAI.Patches
     public static class JobGiver_AISapper
     {
         const int cacheExpiryTicks = 5; //Seconds
-        const int minPathLengthToCache = 20;
+        const int minPathLengthToCache = 0;
 
         /// <summary>
         /// distance to reuse pathcost for similarly located targets
@@ -85,7 +85,8 @@ namespace PogoAI.Patches
                 Tuple<IntVec3, IntVec3, Thing, IntVec3, bool, int> memoryValue = null;
                 foreach (var cost in pathCostCache)
                 {                    
-                    if (cost.Item1.DistanceTo(pawn.Position) < cacheSourceCellDistanceMax && cost.Item2.DistanceTo(attackTarget.Position) < cacheTargetCellDistanceMax)
+                    if (cost.Item1.DistanceTo(pawn.Position) < cacheSourceCellDistanceMax && cost.Item2.DistanceTo(attackTarget.Position) < cacheTargetCellDistanceMax
+                        && GenSight.LineOfSight(pawn.Position, cost.Item1, pawn.Map) && GenSight.LineOfSight(attackTarget.Position, cost.Item2, pawn.Map))
                     {
                         memoryValue = cost;
                         break;
@@ -139,10 +140,6 @@ namespace PogoAI.Patches
                     {
                         job = JobMaker.MakeJob(JobDefOf.Goto, intVec, 501, true);
                         job.collideWithPawns = true;
-                    }
-                    else
-                    {
-                        Log.Message($"{pawn} blocked");
                     }
                 }
                 return job;

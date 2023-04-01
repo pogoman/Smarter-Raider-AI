@@ -26,14 +26,21 @@ namespace PogoAI.Patches
                     return false;
                 }
                 __instance.attackAllInert = true;
-                List<Building> allBuildingsColonist = pawn.Map.listerBuildings.allBuildingsColonist.Where(x =>
+                var allBuildingsColonist = pawn.Map.listerBuildings.allBuildingsColonist.Where(x =>
                     !x.def.IsFrame && x.HitPoints > 0 && x.def.altitudeLayer != AltitudeLayer.Conduits && x.def.designationCategory != DesignationCategoryDefOf.Security
-                    && !x.IsBurning() && x.Position.DistanceTo(pawn.Position) < 10 && GenSight.LineOfSight(pawn.Position, x.Position, x.Map))
-                    .OrderBy(x => x.Position.DistanceTo(pawn.Position)).ToList();
+                    && !x.IsBurning() && x.Position.DistanceTo(pawn.Position) < 20 && GenSight.LineOfSight(pawn.Position, x.Position, x.Map)).InRandomOrder();
                 foreach (var building in allBuildingsColonist)
                 {
                     if (TrashUtility.ShouldTrashBuilding(pawn, building, __instance.attackAllInert))
                     {
+                        using (PawnPath pawnPath = pawn.Map.pathFinder.FindPath(pawn.Position, building.Position,
+                            TraverseParms.For(pawn, Danger.Deadly, TraverseMode.ByPawn, false, false, false), PathEndMode.Touch, null))
+                        {
+                            if (pawnPath.NodesLeftCount > 1 && PawnUtility.AnyPawnBlockingPathAt(pawnPath.nodes[0], pawn, true, false, false))
+                            {
+                                continue;
+                            }
+                        }
                         Job job = TrashUtility.TrashJob(pawn, building, __instance.attackAllInert, false);
                         if (job != null)
                         {
