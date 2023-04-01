@@ -95,7 +95,11 @@ namespace PogoAI.Patches
                 for (int i = 0; i < GenRadial.NumCellsInRadius(radius); i++)
                 {
                     IntVec3 intVec = pos + GenRadial.RadialPattern[i];
-                    instance.IncrementAvoidGrid(intVec, inc);
+                    if (intVec.InBounds(map) && intVec.WalkableByNormal(map)
+                        && __instance.grid[intVec] == 0)
+                    {
+                        instance.IncrementAvoidGrid(intVec, inc);
+                    }
                 }
             }
 
