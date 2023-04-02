@@ -49,12 +49,12 @@ namespace PogoAI.Patches
                     pawn.GetLord().Notify_ReachedDutyLocation(pawn);
                     return false;
                 }
-                Thing attackTarget = null;
                 pathCostCache.RemoveAll(x => Find.TickManager.TicksGame - x.Item6 > cacheExpiryTicks * 60);
                 pathCostCache.RemoveAll(x => !(x.Item3?.Position.IsValid ?? false) || x.Item3.Position.GetRegion(pawn.Map, RegionType.Set_Passable) != null);
                 var blockedPositions = pathCostCache.Where(x => x.Item5).Select(x => x.Item2);
                 if (!intVec.IsValid)
                 {
+                    Thing attackTarget;
                     var targets = pawn.Map.attackTargetsCache.TargetsHostileToFaction(pawn.Faction).Where(x => !x.ThreatDisabled(pawn)
                         && x.Thing.Faction == Faction.OfPlayer && !blockedPositions.Any(y => x.Thing.Position == y)).Select(x => x.Thing).ToList();
                     targets.AddRange(pawn.Map.listerBuildings.allBuildingsColonist.Where(x => x.def.designationCategory != DesignationCategoryDefOf.Structure
@@ -85,8 +85,8 @@ namespace PogoAI.Patches
                 Tuple<IntVec3, IntVec3, Thing, IntVec3, bool, int> memoryValue = null;
                 foreach (var cost in pathCostCache)
                 {                    
-                    if (cost.Item1.DistanceTo(pawn.Position) < cacheSourceCellDistanceMax && cost.Item2.DistanceTo(attackTarget.Position) < cacheTargetCellDistanceMax
-                        && GenSight.LineOfSight(pawn.Position, cost.Item1, pawn.Map) && GenSight.LineOfSight(attackTarget.Position, cost.Item2, pawn.Map))
+                    if (cost.Item1.DistanceTo(pawn.Position) < cacheSourceCellDistanceMax && cost.Item2.DistanceTo(intVec) < cacheTargetCellDistanceMax
+                        && GenSight.LineOfSight(pawn.Position, cost.Item1, pawn.Map) && GenSight.LineOfSight(intVec, cost.Item2, pawn.Map))
                     {
                         memoryValue = cost;
                         break;
@@ -107,9 +107,9 @@ namespace PogoAI.Patches
                             cellBeforeTarget = pawnPath.nodes[1];
                             meleePathBlocked = PawnUtility.AnyPawnBlockingPathAt(cellBeforeTarget, pawn, true, false, false);
                         }
-                        if (pawnPath.nodes.Count >= minPathLengthToCache)
+                        if (pawnPath.nodes?.Count >= minPathLengthToCache)
                         {
-                            pathCostCache.Add(new Tuple<IntVec3, IntVec3, Thing, IntVec3, bool, int>(pawn.Position, attackTarget.Position,
+                            pathCostCache.Add(new Tuple<IntVec3, IntVec3, Thing, IntVec3, bool, int>(pawn.Position, intVec,
                                 thing, cellBeforeBlocker, meleePathBlocked, Find.TickManager.TicksGame));
                         }
                         __result = GetSapJob( pawn, thing, cellBeforeBlocker, intVec, meleePathBlocked);
