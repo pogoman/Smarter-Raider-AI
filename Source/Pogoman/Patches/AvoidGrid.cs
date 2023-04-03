@@ -65,13 +65,13 @@ namespace PogoAI.Patches
                         CompEquippable equip;
                         var threatCondition = false;
                         var building = allBuildingsColonist[i];
-                        if (Init.combatExtended)
+                        if (Init.combatExtended && !(building is Building_TurretGun))
                         {
                             equip = (CompEquippable)building.GetType().GetProperty("GunCompEq").GetValue(building, null);
                             var powered = (bool)building.GetType().GetProperty("Active").GetValue(building, null);
                             var currentTarget = (LocalTargetInfo)building.GetType().GetProperty("CurrentTarget").GetValue(building, null);
                             var emptyMagazine = (bool)building.GetType().GetProperty("EmptyMagazine").GetValue(building, null);
-                            threatCondition = powered && currentTarget == null && !emptyMagazine;
+                            threatCondition = powered && currentTarget == null && !emptyMagazine && equip != null;
                         }
                         else
                         {
