@@ -33,60 +33,70 @@ namespace PogoAI.Patches
                 counter = 0;
                 incAmount = 45;
 
-                //Corpses
-                var corpses = __instance.map.listerThings.ThingsInGroup(ThingRequestGroup.Corpse).Where(x => ((Corpse)x).Age < 1800 
-                    && (((Corpse)x).InnerPawn?.Faction?.HostileTo(Faction.OfPlayer) ?? false));
-                foreach (Corpse corpse in corpses)
+                try
                 {
-                    PrintAvoidGridAroundPos(__instance, __instance.map, corpse.Position, 1, 1000 * (1800 - corpse.Age) / 1800);
-                }
-
-                //Downed Raiders
-                var downed = __instance.map.mapPawns.SpawnedDownedPawns.Where(x => x.Faction.HostileTo(Faction.OfPlayer));
-                foreach (var raider in downed)
-                {
-                    PrintAvoidGridAroundPos(__instance, __instance.map, raider.Position, 1);
-                }
-
-                //Colonist Pawns
-                var draftedColonists = __instance.map.PlayerPawnsForStoryteller.Where(x => 
-                    x.Drafted && x.equipment?.PrimaryEq != null && x.CurJobDef == JobDefOf.Wait_Combat && x.TargetCurrentlyAimingAt == null);
-                foreach (var pawn in draftedColonists)
-                {
-                    PrintAvoidGridLOSThing(__instance, pawn.Map, pawn.Position, pawn.equipment.PrimaryEq.PrimaryVerb, true);
-                }
-
-                //Turrets
-                List<Building> allBuildingsColonist = __instance.map.listerBuildings.allBuildingsColonist;
-                for (int i = 0; i < allBuildingsColonist.Count; i++)
-                {
-                    if (allBuildingsColonist[i].def.building.ai_combatDangerous)
+                    //Corpses
+                    var corpses = __instance.map.listerThings.ThingsInGroup(ThingRequestGroup.Corpse).Where(x => ((Corpse)x).Age < 1800
+                        && (((Corpse)x).InnerPawn?.Faction?.HostileTo(Faction.OfPlayer) ?? false));
+                    foreach (Corpse corpse in corpses)
                     {
-                        CompEquippable equip;
-                        var threatCondition = false;
-                        var building = allBuildingsColonist[i];
-                        if (Init.combatExtended && !(building is Building_TurretGun))
+                        PrintAvoidGridAroundPos(__instance, __instance.map, corpse.Position, 1, 1000 * (1800 - corpse.Age) / 1800);
+                    }
+                    
+                    //Downed Raiders
+                    var downed = __instance.map.mapPawns.SpawnedDownedPawns.Where(x => x.Faction.HostileTo(Faction.OfPlayer));
+                    foreach (var raider in downed)
+                    {
+                        PrintAvoidGridAroundPos(__instance, __instance.map, raider.Position, 1);
+                    }
+
+                    //Colonist Pawns
+                  
+                    var draftedColonists = __instance.map.PlayerPawnsForStoryteller.Where(x =>
+                        x.Drafted && x.equipment?.PrimaryEq != null && x.CurJobDef == JobDefOf.Wait_Combat && x.TargetCurrentlyAimingAt == null);                    
+                    foreach (var pawn in draftedColonists)
+                    {
+                        PrintAvoidGridLOSThing(__instance, pawn.Map, pawn.Position, pawn.equipment.PrimaryEq.PrimaryVerb, true);
+                    }
+                   
+                    //Turrets
+                    List<Building> allBuildingsColonist = __instance.map.listerBuildings.allBuildingsColonist;
+                    for (int i = 0; i < allBuildingsColonist.Count; i++)
+                    {
+                        if (allBuildingsColonist[i].def.building.ai_combatDangerous)
                         {
-                            equip = (CompEquippable)building.GetType().GetProperty("GunCompEq").GetValue(building, null);
-                            var powered = (bool)building.GetType().GetProperty("Active").GetValue(building, null);
-                            var currentTarget = (LocalTargetInfo)building.GetType().GetProperty("CurrentTarget").GetValue(building, null);
-                            var emptyMagazine = (bool)building.GetType().GetProperty("EmptyMagazine").GetValue(building, null);
-                            threatCondition = powered && currentTarget == null && !emptyMagazine && equip != null;
-                        }
-                        else
-                        {
-                            Building_TurretGun building_TurretGun = allBuildingsColonist[i] as Building_TurretGun;
-                            equip = building_TurretGun.GunCompEq;
-                            threatCondition = building_TurretGun.powerComp.PowerOn && building_TurretGun.TargetCurrentlyAimingAt == null;
-                        }
-                        if (threatCondition)
-                        {
-                            PrintAvoidGridLOSThing(__instance, building.Map, building.Position, equip.PrimaryVerb);
+                            CompEquippable equip;
+                            var threatCondition = false;
+                            var building = allBuildingsColonist[i];                            
+                            if (Init.combatExtended && building.GetType().ToString() == "CombatExtended.Building_TurretGunCE")
+                            {
+                                equip = (CompEquippable)building.GetType().GetProperty("GunCompEq").GetValue(building, null);
+                                var powered = (bool)building.GetType().GetProperty("Active").GetValue(building, null);
+                                var currentTarget = (LocalTargetInfo)building.GetType().GetProperty("CurrentTarget").GetValue(building, null);
+                                var emptyMagazine = (bool)building.GetType().GetProperty("EmptyMagazine").GetValue(building, null);
+                                threatCondition = powered && currentTarget == null && !emptyMagazine && equip != null;
+                            }
+                            else
+                            {
+                                Building_TurretGun building_TurretGun = allBuildingsColonist[i] as Building_TurretGun;
+                                equip = building_TurretGun.GunCompEq;
+                                threatCondition = equip != null && (building_TurretGun.powerComp?.PowerOn ?? false) && building_TurretGun.TargetCurrentlyAimingAt == null;
+                            }
+                            if (threatCondition)
+                            {
+                                PrintAvoidGridLOSThing(__instance, building.Map, building.Position, equip.PrimaryVerb);
+                            }
                         }
                     }
+                    __instance.ExpandAvoidGridIntoEdifices();
+                    //Log.Message($"Count: {counter}");
+
                 }
-                __instance.ExpandAvoidGridIntoEdifices();
-                //Log.Message($"Count: {counter}");
+                catch (Exception e)
+                {
+                    Log.Error("Smarter Raid AI: " + e.StackTrace);
+                }
+
                 return false;
             }
 
