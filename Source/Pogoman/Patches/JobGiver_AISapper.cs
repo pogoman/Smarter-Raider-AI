@@ -136,7 +136,7 @@ namespace PogoAI.Patches
                 if (job == null)
                 {
                     pathCostCache.RemoveAll(x => x.Item4 == cellBeforeBlocker);
-                    if (!(pawn.equipment.PrimaryEq?.PrimaryVerb?.IsMeleeAttack ?? true) || !meleePathBlocked)
+                    if (!(pawn.equipment?.PrimaryEq?.PrimaryVerb?.IsMeleeAttack ?? true) || !meleePathBlocked)
                     {
                         job = JobMaker.MakeJob(JobDefOf.Goto, intVec, 501, true);
                         job.collideWithPawns = true;

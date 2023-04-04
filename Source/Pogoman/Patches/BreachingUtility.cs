@@ -90,7 +90,8 @@ namespace PogoAI.Patches
             {
                 if (__result)
                 {
-                    __result = GenClosest.ClosestThing_Global(c, map.listerBuildings.allBuildingsColonist, 10f) != null;
+                    Building edifice = c.GetEdifice(map);
+                    __result = edifice.Faction == Faction.OfPlayer || edifice.def.mineable;
                 }
             }
         }
