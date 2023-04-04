@@ -17,7 +17,12 @@ namespace PogoAI.Patches
         {
             static bool Prefix(ref RimWorld.JobGiver_AITrashBuildingsDistant __instance, Pawn pawn, ref Job __result)
             {
-                //Always sap first
+                //Ignore for insects
+                if (pawn.Faction == Faction.OfInsects)
+                {
+                    return true;
+                }
+                //Otherwise always sap first
                 Job sapJob = null;
                 JobGiver_AISapper.JobGiver_AISapper_TryGiveJob_Patch.Prefix(pawn, ref sapJob);
                 if (sapJob != null && sapJob.def != JobDefOf.Wait && (sapJob.def != JobDefOf.Goto || sapJob.expiryInterval == 501))
