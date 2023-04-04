@@ -62,7 +62,7 @@ namespace PogoAI.Patches.CE
 
             static bool Prefix(IntVec3 root, LocalTargetInfo targ, ref ShootLine resultingLine, Verb __instance, ref bool __result)
             {
-                if (targ.Pawn != null || (__instance.CasterPawn?.IsColonist ?? false) || (__instance.EquipmentSource?.def?.ToString().Matches("Mortar") ?? false)) {
+                if ((__instance.CasterPawn?.IsColonist ?? false) || (__instance.EquipmentSource?.def?.ToString().Matches("Mortar") ?? false)) {
                     return true;
                 }
                 __result = __instance.TryFindShootLineFromTo(root, targ, out resultingLine);
