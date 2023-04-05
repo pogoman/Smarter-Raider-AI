@@ -54,6 +54,25 @@ namespace PogoAI.Patches
 
                 return true;
             }
+
+            static MethodBase TargetMethod()
+            {
+                return target;
+            }
+
+            static bool Prefix(IntVec3 root, LocalTargetInfo targ, ref ShootLine resultingLine, Verb __instance, ref bool __result)
+            {
+                if (__instance.EquipmentSource?.def?.ToString().Matches("Mortar") ?? false)
+                {
+                    return true;
+                }
+                __result = __instance.TryFindShootLineFromTo(root, targ, out resultingLine);
+                if (__result)
+                {
+                    return true;
+                }
+                return false;
+            }
         }
     }
 }
