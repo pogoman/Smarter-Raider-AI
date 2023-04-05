@@ -71,18 +71,20 @@ namespace PogoAI.Patches
                             if (Init.combatExtended && building.GetType().ToString() == "CombatExtended.Building_TurretGunCE")
                             {
                                 equip = (CompEquippable)building.GetType().GetProperty("GunCompEq").GetValue(building, null);
-                                var powered = (bool)building.GetType().GetProperty("Active").GetValue(building, null);
+                                var active = (bool)building.GetType().GetProperty("Active").GetValue(building, null);
                                 var currentTarget = (LocalTargetInfo)building.GetType().GetProperty("CurrentTarget").GetValue(building, null);
                                 var emptyMagazine = (bool)building.GetType().GetProperty("EmptyMagazine").GetValue(building, null);
                                 var isMannable = (bool)building.GetType().GetProperty("IsMannable").GetValue(building, null);
                                 var mannedByColonist = ((CompMannable)building.GetType().GetProperty("MannableComp").GetValue(building, null))?.MannedNow ?? false;
-                                threatCondition = powered && currentTarget == null && !emptyMagazine && equip != null && (!isMannable || mannedByColonist);
+                                threatCondition = active && currentTarget == null && !emptyMagazine && equip != null && (!isMannable || mannedByColonist);
                             }
                             else
                             {
                                 Building_TurretGun building_TurretGun = allBuildingsColonist[i] as Building_TurretGun;
                                 equip = building_TurretGun.GunCompEq;
-                                threatCondition = equip != null && (building_TurretGun.powerComp?.PowerOn ?? false) && building_TurretGun.TargetCurrentlyAimingAt == null;
+                                threatCondition = equip != null && building_TurretGun.Active && building_TurretGun.TargetCurrentlyAimingAt == null
+                                    && (!building_TurretGun.IsMannable || building_TurretGun.MannedByColonist) 
+                                    && (building_TurretGun.refuelableComp?.HasFuel ?? true);
                             }
                             if (threatCondition)
                             {
