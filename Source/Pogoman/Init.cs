@@ -15,11 +15,13 @@ namespace PogoAI
         public const string DEFAULT_BREACH_WEAPONS = "stickbomb, concussion, frag, rocket, inferno, chargeblast, thermal, thump, cannon";
 
         public string BreachWeapons = DEFAULT_BREACH_WEAPONS;
+        public bool CombatExtendedCompatPerf = true;
 
         public override void ExposeData()
         {
             base.ExposeData();
             Scribe_Values.Look(ref BreachWeapons, "breachWeapons", DEFAULT_BREACH_WEAPONS, true);
+            Scribe_Values.Look(ref CombatExtendedCompatPerf, "combatExtendedCompatPerf", true, true);
         }
     }
 
@@ -44,6 +46,11 @@ namespace PogoAI
             Listing_Standard listingStandard = new Listing_Standard();
             listingStandard.Begin(inRect);    
             listingStandard.AddLabeledTextField("Allowed Breach Weapons:\n(comma separated, case insensitive, partial match, no spaces)", ref settings.BreachWeapons, 0.25f, 80);
+            if (combatExtended)
+            {
+                listingStandard.CheckboxLabeled("Enable Combat Extended Compatibility Performance fix (recommeded to leave on)\nRequires game restart.",
+                    ref settings.CombatExtendedCompatPerf);
+            }
             listingStandard.End();
             settings.Write();
         }
