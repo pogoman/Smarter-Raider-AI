@@ -42,6 +42,10 @@ namespace PogoAI.Patches
         {
             public static bool Prefix(Pawn pawn, ref Job __result)
             {
+                if (pawn.Faction == Faction.OfInsects)
+                {
+                    return true;
+                }
                 IntVec3 intVec = pawn.mindState.duty.focus.Cell;
                 if (intVec.IsValid && (float)intVec.DistanceToSquared(pawn.Position) < 100f && intVec.GetRoom(pawn.Map) == pawn.GetRoom(RegionType.Set_All) 
                     && intVec.WithinRegions(pawn.Position, pawn.Map, 9, TraverseMode.NoPassClosedDoors, RegionType.Set_Passable))

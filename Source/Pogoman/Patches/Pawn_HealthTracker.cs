@@ -17,7 +17,7 @@ namespace PogoAI.Patches
     {
         static void GenerateAvoidGrid(Verse.Pawn_HealthTracker __instance)
         {
-            if (__instance.pawn.Faction.HostileTo(Faction.OfPlayer) 
+            if (__instance.pawn.Faction.HostileTo(Faction.OfPlayer) && __instance.pawn.Faction != Faction.OfInsects
                 && GenClosest.ClosestThing_Global(__instance.pawn.Position, __instance.pawn.Map.listerBuildings.allBuildingsColonist, 10f) != null)
             {
                 AvoidGrid.AvoidGrid_Regenerate.PrintAvoidGridAroundPos(__instance.pawn.Map.avoidGrid, __instance.pawn.Map, __instance.pawn.Position, 1, 1000);
