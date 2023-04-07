@@ -22,7 +22,7 @@ namespace PogoAI.Patches
 
             static void Postfix(Pawn pawn, ref Job __result)
             {
-                if (__result?.targetA.Thing?.Position != null && (pawn.equipment.PrimaryEq?.PrimaryVerb?.IsMeleeAttack ?? true))
+                if (__result?.targetA.Thing?.Position != null && (pawn.equipment?.PrimaryEq?.PrimaryVerb?.IsMeleeAttack ?? true))
                 {
                     using (PawnPath pawnPath = pawn.Map.pathFinder.FindPath(pawn.Position, __result.targetA.Thing.Position,
                         TraverseParms.For(pawn, Danger.Deadly, TraverseMode.ByPawn, false, false, false), PathEndMode.Touch, null))
