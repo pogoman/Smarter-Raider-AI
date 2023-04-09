@@ -100,7 +100,7 @@ namespace PogoAI.Patches
                 if (memoryValue == null)
                 {
                     using (PawnPath pawnPath = pawn.Map.pathFinder.FindPath(pawn.Position, intVec,
-                        TraverseParms.For(pawn, Danger.None, TraverseMode.PassAllDestroyableThings, false, false, false), PathEndMode.OnCell, customTuning))
+                        TraverseParms.For(pawn, Danger.Deadly, TraverseMode.PassAllDestroyableThings, false, false, false), PathEndMode.OnCell, customTuning))
                     {
                         IntVec3 cellBeforeBlocker;
                         Thing thing = pawnPath.FirstBlockingBuilding(out cellBeforeBlocker, pawn);
