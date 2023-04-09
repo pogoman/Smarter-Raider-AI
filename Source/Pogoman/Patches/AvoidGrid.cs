@@ -25,6 +25,7 @@ namespace PogoAI.Patches
             static Verse.AI.AvoidGrid instance;
             static int counter = 0;
             static ByteGrid tempGrid;
+            const bool runMannableCheck = false;
 
             static bool Prefix(Verse.AI.AvoidGrid __instance)
             {
@@ -72,18 +73,22 @@ namespace PogoAI.Patches
                             {
                                 equip = (CompEquippable)building.GetType().GetProperty("GunCompEq").GetValue(building, null);
                                 var active = (bool)building.GetType().GetProperty("Active").GetValue(building, null);
+                                var activePowerSource = (CompPowerTrader)building.GetType().GetProperty("PowerComp").GetValue(building, null);
                                 var currentTarget = (LocalTargetInfo)building.GetType().GetProperty("CurrentTarget").GetValue(building, null);
                                 var emptyMagazine = (bool)building.GetType().GetProperty("EmptyMagazine").GetValue(building, null);
                                 var isMannable = (bool)building.GetType().GetProperty("IsMannable").GetValue(building, null);
                                 var mannedByColonist = ((CompMannable)building.GetType().GetProperty("MannableComp").GetValue(building, null))?.MannedNow ?? false;
-                                threatCondition = active && currentTarget == null && !emptyMagazine && equip != null && (!isMannable || mannedByColonist);
+                                threatCondition = (active || (activePowerSource?.PowerNet?.CanPowerNow(activePowerSource) ?? false))
+                                    && currentTarget == null && !emptyMagazine && equip != null && (!runMannableCheck || !isMannable || mannedByColonist);
                             }
                             else
                             {
                                 Building_TurretGun building_TurretGun = allBuildingsColonist[i] as Building_TurretGun;
                                 equip = building_TurretGun.GunCompEq;
-                                threatCondition = equip != null && building_TurretGun.Active && building_TurretGun.TargetCurrentlyAimingAt == null
-                                    && (!building_TurretGun.IsMannable || building_TurretGun.MannedByColonist) 
+                                threatCondition = equip != null && (building_TurretGun.Active 
+                                    || (building_TurretGun.PowerComp?.PowerNet?.CanPowerNow(building_TurretGun.powerComp) ?? false))
+                                    && building_TurretGun.TargetCurrentlyAimingAt == null
+                                    && (!runMannableCheck || !building_TurretGun.IsMannable || building_TurretGun.MannedByColonist) 
                                     && (building_TurretGun.refuelableComp?.HasFuel ?? true);
                             }
                             if (threatCondition)
