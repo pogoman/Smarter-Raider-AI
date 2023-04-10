@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Verse.AI;
 using Verse;
+using Unity.Jobs;
 
 namespace PogoAI.Patches
 {
@@ -20,28 +21,27 @@ namespace PogoAI.Patches
                 __instance.needLOSToAcquireNonPawnTargets = true;
             }
 
-            //static void Postfix(Pawn pawn, ref Job __result)
-            //{
-            //    if (__result?.targetA.Thing?.Position != null && (pawn.equipment?.PrimaryEq?.PrimaryVerb?.IsMeleeAttack ?? true))
-            //    {
-            //        using (PawnPath pawnPath = pawn.Map.pathFinder.FindPath(pawn.Position, __result.targetA.Thing.Position,
-            //            TraverseParms.For(pawn, Danger.Deadly, TraverseMode.ByPawn, false, false, false), PathEndMode.Touch, null))
-            //        {
-            //            if (pawnPath.NodesLeftCount > 1 && pawnPath.nodes.Any(x => PawnUtility.AnyPawnBlockingPathAt(x, pawn, true, false, false)))
-            //            {
-            //                IntVec3 intVec = CellFinder.RandomClosewalkCellNear(pawn.Position, pawn.Map, 20, null);
-            //                if (intVec == pawn.Position)
-            //                {
-            //                    __result = JobMaker.MakeJob(JobDefOf.Wait, 20, true);
-            //                }
-            //                else
-            //                {
-            //                    __result = JobMaker.MakeJob(JobDefOf.Goto, intVec, 120, true);
-            //                }
-            //            }
-            //        }
-            //    }
-            //}
+            static void Postfix(Pawn pawn, ref Job __result)
+            {
+                if (__result?.targetA.Thing?.Position != null && (pawn.equipment?.PrimaryEq?.PrimaryVerb?.IsMeleeAttack ?? true))
+                {
+                    using (PawnPath pawnPath = pawn.Map.pathFinder.FindPath(pawn.Position, __result.targetA.Thing.Position,
+                        TraverseParms.For(pawn, Danger.Deadly, TraverseMode.ByPawn, false, false, false), PathEndMode.Touch, null))
+                    {
+                        if (pawnPath.NodesLeftCount > 1 && pawnPath.nodes.Any(x => PawnUtility.AnyPawnBlockingPathAt(x, pawn, true, false, false)))
+                        {
+                            __result = null;
+                            __result = Utilities.GetTrashNearbyWallJob(pawn, 10);
+                            if (__result == null)
+                            {
+                                #if DEBUG
+                                    Find.CurrentMap.debugDrawer.FlashCell(pawn.Position, 0f, $"MNT", 120);
+                                #endif
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }

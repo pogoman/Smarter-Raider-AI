@@ -14,6 +14,7 @@ namespace PogoAI
         public InitMap(Verse.Map map) : base(map)
         {
             Patches.JobGiver_AISapper.pathCostCache.Clear();
+            Patches.JobGiver_AISapper.customTuning.custom = new Patches.JobGiver_AISapper.CustomTuning();
         }
     }
 }
