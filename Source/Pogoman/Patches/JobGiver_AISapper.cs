@@ -14,6 +14,8 @@ using System.Net.NetworkInformation;
 using Unity.Jobs;
 using Verse.Noise;
 using Mono.Unix.Native;
+using PogoAI.Extensions;
+using System.Security.Cryptography;
 
 namespace PogoAI.Patches
 {
@@ -32,10 +34,33 @@ namespace PogoAI.Patches
         /// </summary>
         const int cacheSourceCellDistanceMax = 10;
 
-        /// <summary>
-        /// pawn pos, target pos, blocking thing, cell before, cache time
-        /// </summary>
-        static List<Tuple<IntVec3, IntVec3, Thing, IntVec3, bool, int>> pathCostCache = new List<Tuple<IntVec3, IntVec3, Thing, IntVec3, bool, int>>();
+        static PathFinderCostTuning customTuning = new PathFinderCostTuning()
+        {
+            costOffLordWalkGrid = 0,
+            costBlockedWallBase = 0,
+            costBlockedWallExtraPerHitPoint = 5,
+            costBlockedDoor = 0,
+            costBlockedDoorPerHitPoint = 5,
+            costBlockedWallExtraForNaturalWalls = 0
+        };
+
+        public class CachedPath
+        {
+            public Pawn pawn;
+            public Thing targetThing;
+            public IntVec3 cellBefore;
+            public IntVec3 cellAfter;
+
+            public CachedPath(Pawn pawn, Thing targetThing, IntVec3 cellBefore, IntVec3 cellAfter)
+            {
+                this.pawn = pawn;
+                this.targetThing = targetThing;
+                this.cellBefore = cellBefore;
+                this.cellAfter = cellAfter;
+            }
+        }
+        
+        public static List<CachedPath> pathCostCache = new List<CachedPath>();
 
         [HarmonyPatch(typeof(RimWorld.JobGiver_AISapper), "TryGiveJob")]
         public static class JobGiver_AISapper_TryGiveJob_Patch
@@ -53,98 +78,188 @@ namespace PogoAI.Patches
                     pawn.GetLord().Notify_ReachedDutyLocation(pawn);
                     return false;
                 }
-                pathCostCache.RemoveAll(x => Find.TickManager.TicksGame - x.Item6 > cacheExpiryTicks * 60);
-                pathCostCache.RemoveAll(x => !(x.Item3?.Position.IsValid ?? false) || x.Item3.Position.GetRegion(pawn.Map, RegionType.Set_Passable) != null);
-                var blockedPositions = pathCostCache.Where(x => x.Item5).Select(x => x.Item2);
+
+                pathCostCache.RemoveAll(x =>/* Find.TickManager.TicksGame - x.Item7 > cacheExpiryTicks * 60 || */
+                    !(x.targetThing?.Position.IsValid ?? false) || x.targetThing.Position.GetRegion(pawn.Map, RegionType.Set_Passable) != null
+                    || (pawn.Position.DistanceTo(x.cellAfter) < 10 && pawn.CanReach(x.cellAfter, PathEndMode.OnCell, Danger.Deadly, false, false, TraverseMode.ByPawn)));
+
+                CachedPath memoryValue = pathCostCache.FirstOrDefault();
+                if (memoryValue != null)
+                {
+                    intVec = memoryValue.targetThing.Position;
+                }
+
                 if (!intVec.IsValid)
                 {
                     Thing attackTarget;
-                    var targets = pawn.Map.attackTargetsCache.TargetsHostileToFaction(pawn.Faction).Where(x => !x.ThreatDisabled(pawn)
-                        && x.Thing.Faction == Faction.OfPlayer && !blockedPositions.Any(y => x.Thing.Position == y)).Select(x => x.Thing).ToList();
-                    targets.AddRange(pawn.Map.listerBuildings.allBuildingsColonist.Where(x => x.def.designationCategory != DesignationCategoryDefOf.Structure
+                    //var targets = pawn.Map.attackTargetsCache.TargetsHostileToFaction(pawn.Faction).Where(x => !x.ThreatDisabled(pawn)
+                    //    && x.Thing.Faction == Faction.OfPlayer && !blockedPositions.Any(y => x.Thing.Position == y)).Select(x => x.Thing).ToList();
+                    attackTarget = pawn.Map.listerBuildings.allBuildingsColonist.OrderBy(x => x.Position.DistanceTo(pawn.Position)).Where(x => x.def.designationCategory != DesignationCategoryDefOf.Structure
                         && x.def.designationCategory != DesignationCategoryDefOf.Security && !x.def.IsFrame && x.HitPoints > 0 && x.def.altitudeLayer != AltitudeLayer.Conduits
-                        && !x.IsBurning() && !blockedPositions.Any(y => x.Position == y)));                   
-                    
-                    if (!targets.TryRandomElement(out attackTarget))
+                       /* && !x.IsBurning() && !blockedPositions.Any(y => x.Position == y)*/).FirstOrDefault();
+
+                    if (attackTarget == null)
                     {
                         return false;
                     }
-
                     intVec = attackTarget.Position;
-                }
-                if (!pawn.CanReach(intVec, PathEndMode.OnCell, Danger.Deadly, false, false, TraverseMode.PassAllDestroyableThings))
-                {
-                    return false;
-                }
-                
-                var customTuning = new PathFinderCostTuning() { 
-                    costOffLordWalkGrid = 0, 
-                    costBlockedWallBase = 0, 
-                    costBlockedWallExtraPerHitPoint = 5,
-                    costBlockedDoor = 0,
-                    costBlockedDoorPerHitPoint = 5,
-                    costBlockedWallExtraForNaturalWalls = 0
-                };
-                
-                Tuple<IntVec3, IntVec3, Thing, IntVec3, bool, int> memoryValue = null;
-                foreach (var cost in pathCostCache)
-                {                    
-                    if (cost.Item1.DistanceTo(pawn.Position) < cacheSourceCellDistanceMax && cost.Item2.DistanceTo(intVec) < cacheTargetCellDistanceMax
-                        && GenSight.LineOfSight(pawn.Position, cost.Item1, pawn.Map) && GenSight.LineOfSight(intVec, cost.Item2, pawn.Map))
-                    {
-                        memoryValue = cost;
-                        break;
-                    }
+                    Find.CurrentMap.debugDrawer.FlashCell(intVec, 0.7f, "AT", 500);
                 }
 
                 if (memoryValue == null)
                 {
+                    memoryValue = pathCostCache.FirstOrDefault(x => x.targetThing.Position == intVec);
+                }
+
+                if (memoryValue == null)
+                {                   
                     using (PawnPath pawnPath = pawn.Map.pathFinder.FindPath(pawn.Position, intVec,
-                        TraverseParms.For(pawn, Danger.None, TraverseMode.PassAllDestroyableThings, false, false, false), PathEndMode.OnCell, customTuning))
+                        TraverseParms.For(pawn, Danger.Deadly, TraverseMode.PassAllDestroyableThings, false, false, false), PathEndMode.OnCell, customTuning))
                     {
                         IntVec3 cellBeforeBlocker;
-                        Thing thing = pawnPath.FirstBlockingBuilding(out cellBeforeBlocker, pawn);
+                        IntVec3 cellAfterBlocker;
+                        Thing thing = FirstBlockingBuilding(pawnPath, out cellBeforeBlocker, out cellAfterBlocker, pawn);
                         IntVec3 cellBeforeTarget = IntVec3.Invalid;
-                        var meleePathBlocked = false;
                         if (pawnPath.nodes.Count > 1)
                         {
                             cellBeforeTarget = pawnPath.nodes[1];
-                            meleePathBlocked = PawnUtility.AnyPawnBlockingPathAt(cellBeforeTarget, pawn, true, false, false);
+                            //meleePathBlocked = PawnUtility.AnyPawnBlockingPathAt(cellBeforeTarget, pawn, true, false, false);
                         }
                         if (pawnPath.nodes?.Count >= minPathLengthToCache)
                         {
-                            pathCostCache.Add(new Tuple<IntVec3, IntVec3, Thing, IntVec3, bool, int>(pawn.Position, intVec,
-                                thing, cellBeforeBlocker, meleePathBlocked, Find.TickManager.TicksGame));
+                            pathCostCache.Add(new CachedPath(pawn, thing, cellBeforeBlocker, cellAfterBlocker));
                         }
-                        __result = GetSapJob( pawn, thing, cellBeforeBlocker, intVec, meleePathBlocked);
+                        __result = GetSapJob( pawn, thing, cellBeforeBlocker);
                     }
                 }
-                else if (memoryValue != null)
+                else
                 {
-                    __result = GetSapJob(pawn, memoryValue.Item3, memoryValue.Item4, intVec, memoryValue.Item5);
+                    //pathCostCache.Add(new CachedPath(pawn, memoryValue.targetThing, memoryValue.cellBefore, memoryValue.cellAfter));
+                    __result = GetSapJob(pawn, memoryValue.targetThing, memoryValue.cellBefore);
                 }
+                //Log.Message($"{pawn} {__result} {__result.targetA.Cell} {__result.def} {__result.expiryInterval}");
                 return false;
             }
 
-            private static Job GetSapJob(Pawn pawn, Thing thing, IntVec3 cellBeforeBlocker, IntVec3 intVec, bool meleePathBlocked)
+            public static Thing FirstBlockingBuilding(PawnPath path, out IntVec3 cellBefore, out IntVec3 cellAfter, Pawn pawn)
+            {
+                cellBefore = IntVec3.Invalid;
+                cellAfter = IntVec3.Invalid;
+                if (!path.Found)
+                {
+                    return null;
+                }
+                List<IntVec3> nodesReversed = path.NodesReversed;
+                if (nodesReversed.Count == 1)
+                {
+                    cellBefore = nodesReversed[0];
+                    return null;
+                }
+                Building building = null;
+                IntVec3 intVec = IntVec3.Invalid;
+                for (int i = nodesReversed.Count - 2; i >= 0; i--)
+                {
+                    Find.CurrentMap.debugDrawer.FlashCell(nodesReversed[i], 0.5f, "block", 500);
+                    Building edifice = nodesReversed[i].GetEdifice(pawn.Map);
+                    if (edifice != null)
+                    {
+                        Building_Door building_Door = edifice as Building_Door;
+                        bool flag = building_Door != null && !building_Door.FreePassage && !building_Door.PawnCanOpen(pawn);
+                        bool flag2 = edifice.def.IsFence && !pawn.def.race.CanPassFences;
+                        if (flag || flag2 || edifice.def.passability == Traversability.Impassable)
+                        {
+                            if (building != null)
+                            {
+                                cellBefore = intVec;
+                                return building;
+                            }
+                            cellBefore = nodesReversed[i + 1];
+                            if (i - 1 > 0)
+                            {
+                                cellAfter = nodesReversed[i - 1];
+                            }
+                            return edifice;
+                        }
+                    }
+                    if (edifice != null && edifice.def.passability == Traversability.PassThroughOnly && edifice.def.Fillage == FillCategory.Full)
+                    {
+                        if (building == null)
+                        {
+                            building = edifice;
+                            intVec = nodesReversed[i + 1];
+                        }
+                    }
+                    else if (edifice == null || edifice.def.passability != Traversability.PassThroughOnly)
+                    {
+                        building = null;
+                    }
+                }
+                cellBefore = nodesReversed[0];
+                return null;
+            }
+
+            private static Job GetSapJob(Pawn pawn, Thing thing, IntVec3 cellBeforeBlocker)
             {
                 Job job = null;
                 if (thing != null)
                 {
-                    job = DigUtility.PassBlockerJob(pawn, thing, cellBeforeBlocker, true, true);
+                    if (!StatDefOf.MiningSpeed.Worker.IsDisabledFor(pawn))
+                    {
+                        job = DigUtility.MineOrWaitJob(pawn, thing, cellBeforeBlocker);
+                    }
+                    else
+                    {
+                        job = DigUtility.MeleeOrWaitJob(pawn, thing, cellBeforeBlocker);
+                    }
                     if (job != null)
                     {
                         job.expiryInterval = Rand.RangeInclusive(502, 1800);
+                        Find.CurrentMap.debugDrawer.FlashCell(thing.Position, 0.5f, "Targ", job.expiryInterval);
+                        if (job.def == JobDefOf.Wait || (job.def == JobDefOf.Goto && job.targetA.Cell.DistanceTo(pawn.Position) < 15))
+                        {
+                            Building trashTarget = null;
+                            for (int i = 0; i < GenRadial.NumCellsInRadius(10); i++)
+                            {
+                                IntVec3 c = pawn.Position + GenRadial.RadialPattern[i];
+                                if (c.InBounds(pawn.Map))
+                                {
+                                    var edifice = c.GetEdifice(pawn.Map);
+                                    if (edifice != null && (edifice.def == ThingDefOf.Wall || edifice.def == ThingDefOf.Door 
+                                        || edifice.def.defName.Matches("embrasure")) && GenSight.LineOfSight(pawn.Position, c, pawn.Map)) 
+                                    {
+                                        using (PawnPath pawnPath = pawn.Map.pathFinder.FindPath(pawn.Position, edifice,
+                                            TraverseParms.For(pawn, Danger.Deadly, TraverseMode.ByPawn, false, false, false), PathEndMode.Touch, null))
+                                        {
+                                            if (pawnPath.NodesLeftCount > 1 && pawnPath.nodes.Any(x => PawnUtility.AnyPawnBlockingPathAt(x, pawn, true, false, false)))
+                                            {
+                                                continue;
+                                            }
+                                            else
+                                            {
+                                                trashTarget = edifice;
+                                                break;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            if (trashTarget != null)
+                            {
+                                Find.CurrentMap.debugDrawer.FlashCell(trashTarget.Position, 0.6f, $"{pawn} smash", 120);
+                                job = TrashUtility.TrashJob(pawn, trashTarget, true, false);
+                                if (job != null)
+                                {
+                                    job.expireRequiresEnemiesNearby = false;
+                                    job.expiryInterval = 120;
+                                    job.collideWithPawns = true;
+                                }
+                            }
+                        }
                     }
                 }
                 if (job == null)
                 {
-                    pathCostCache.RemoveAll(x => x.Item4 == cellBeforeBlocker);
-                    if (!(pawn.equipment?.PrimaryEq?.PrimaryVerb?.IsMeleeAttack ?? true) || !meleePathBlocked)
-                    {
-                        job = JobMaker.MakeJob(JobDefOf.Goto, intVec, 501, true);
-                        job.collideWithPawns = true;
-                    }
+                    Log.Message($"{pawn} job null");
                 }
                 return job;
             }
