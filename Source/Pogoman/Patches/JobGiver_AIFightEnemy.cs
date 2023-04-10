@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Verse.AI;
 using Verse;
+using Unity.Jobs;
 
 namespace PogoAI.Patches
 {
@@ -27,9 +28,16 @@ namespace PogoAI.Patches
                     using (PawnPath pawnPath = pawn.Map.pathFinder.FindPath(pawn.Position, __result.targetA.Thing.Position,
                         TraverseParms.For(pawn, Danger.Deadly, TraverseMode.ByPawn, false, false, false), PathEndMode.Touch, null))
                     {
-                        if (pawnPath.NodesLeftCount > 1 && PawnUtility.AnyPawnBlockingPathAt(pawnPath.nodes[0], pawn, true, false, false))
+                        if (pawnPath.NodesLeftCount > 1 && pawnPath.nodes.Any(x => PawnUtility.AnyPawnBlockingPathAt(x, pawn, true, false, false)))
                         {
                             __result = null;
+                            __result = Utilities.GetTrashNearbyWallJob(pawn, 10);
+                            if (__result == null)
+                            {
+                                #if DEBUG
+                                    Find.CurrentMap.debugDrawer.FlashCell(pawn.Position, 0f, $"MNT", 120);
+                                #endif
+                            }
                         }
                     }
                 }

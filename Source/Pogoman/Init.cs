@@ -12,7 +12,7 @@ namespace PogoAI
 {
     public class PogoSettings : ModSettings
     {
-        public const string DEFAULT_BREACH_WEAPONS = "stickbomb, concussion, frag, rocket, inferno, chargeblast, thermal, thump, cannon";
+        public const string DEFAULT_BREACH_WEAPONS = "stickbomb, concussion, rocket, inferno, chargeblast, thermal, thump, cannon";
 
         public string BreachWeapons = DEFAULT_BREACH_WEAPONS;
         public bool CombatExtendedCompatPerf = true;
