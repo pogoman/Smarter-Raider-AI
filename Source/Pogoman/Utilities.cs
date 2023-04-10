@@ -57,7 +57,7 @@ namespace PogoAI
             return job;
         }
 
-        public static Building GetNearbyTrap(Pawn pawn, int radius)
+        public static Thing GetNearbyThing(Pawn pawn, ThingDef thingDef, int radius)
         {
             Building building = null;
             for (int i = 0; i < GenRadial.NumCellsInRadius(radius); i++)
@@ -66,7 +66,7 @@ namespace PogoAI
                 if (c.InBounds(pawn.Map))
                 {
                     var edifice = c.GetEdifice(pawn.Map);
-                    if (edifice != null && edifice.def == ThingDefOf.TrapSpike && edifice.HitPoints > 0)
+                    if (edifice != null && edifice.def == thingDef && edifice.HitPoints > 0)
                     {
                         building = edifice;
                         break;
