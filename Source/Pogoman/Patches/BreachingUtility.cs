@@ -91,7 +91,7 @@ namespace PogoAI.Patches
                 if (__result)
                 {
                     Building edifice = c.GetEdifice(map);
-                    __result = edifice.Faction == Faction.OfPlayer || edifice.def.mineable;
+                    __result = edifice?.Faction == Faction.OfPlayer;
                 }
             }
         }

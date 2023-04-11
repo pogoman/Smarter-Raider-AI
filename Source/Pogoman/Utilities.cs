@@ -23,7 +23,8 @@ namespace PogoAI
                 {
                     var edifice = c.GetEdifice(pawn.Map);
                     if (edifice != null && (edifice.def == ThingDefOf.Wall || edifice.def == ThingDefOf.Door || edifice.def.defName.Matches("embrasure") 
-                        || (edifice.def.mineable && edifice.def != ThingDefOf.CollapsedRocks && edifice.def != ThingDefOf.RaisedRocks)))
+                        || (edifice.def.mineable && edifice.def != ThingDefOf.CollapsedRocks && edifice.def != ThingDefOf.RaisedRocks))
+                        && pawn.CanReserve(edifice))
                     {
                         using (PawnPath pawnPath = pawn.Map.pathFinder.FindPath(pawn.Position, edifice,
                             TraverseParms.For(pawn, Danger.Deadly, TraverseMode.ByPawn, false, false, false), PathEndMode.Touch, null))
@@ -45,12 +46,31 @@ namespace PogoAI
             {
                 #if DEBUG
                     Find.CurrentMap.debugDrawer.FlashCell(trashTarget.Position, 0.6f, $"smash", 120);
-                #endif
-                job = TrashUtility.TrashJob(pawn, trashTarget, true, false);
+#endif
+                var canMineMineables = true;
+                if (StatDefOf.MiningSpeed.Worker.IsDisabledFor(pawn))
+                {
+                    canMineMineables = false;
+                }
+                if (trashTarget.def.mineable)
+                {
+                    if (canMineMineables)
+                    {
+                        job = JobMaker.MakeJob(JobDefOf.Mine, trashTarget);
+                    }
+                    else
+                    {
+                        job = JobMaker.MakeJob(JobDefOf.AttackMelee, trashTarget);
+                    }
+                }
+                else
+                {
+                    job = TrashUtility.TrashJob(pawn, trashTarget, true, false);
+                }
                 if (job != null)
                 {
                     job.expireRequiresEnemiesNearby = false;
-                    job.expiryInterval = 60;
+                    job.expiryInterval = 120;
                     job.collideWithPawns = true;
                 }
             }
