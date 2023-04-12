@@ -1,11 +1,5 @@
-﻿using RimWorld;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
-using UnityEngine;
-using Verse;
-using Verse.AI.Group;
+﻿using Verse;
+using static PogoAI.Patches.AvoidGrid;
 
 namespace PogoAI
 {
@@ -14,7 +8,8 @@ namespace PogoAI
         public InitMap(Verse.Map map) : base(map)
         {
             Patches.JobGiver_AISapper.pathCostCache.Clear();
-            Patches.JobGiver_AISapper.customTuning.custom = new Patches.JobGiver_AISapper.CustomTuning();
+            Patches.JobGiver_AISapper.findNewPaths = true;
+            AvoidGrid_Regenerate.lastUpdateTicks = 0;
         }
     }
 }

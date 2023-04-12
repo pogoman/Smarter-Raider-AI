@@ -25,10 +25,21 @@ namespace PogoAI.Patches
             static Verse.AI.AvoidGrid instance;
             static int counter = 0;
             static ByteGrid tempGrid;
+            public static int lastUpdateTicks = 0;
             const bool runMannableCheck = false;
 
             static bool Prefix(Verse.AI.AvoidGrid __instance)
             {
+                //No need to update that frequently
+                if (lastUpdateTicks != 0 && (Find.TickManager.TicksGame - lastUpdateTicks) % 60 < 5)
+                {
+                    __instance.gridDirty = false;
+#if DEBUG
+                    Log.Message($"Avoid grid tried to update at {(Find.TickManager.TicksGame - lastUpdateTicks) % 60}");
+#endif
+                    return false;
+                }
+
                 instance = __instance;
                 __instance.gridDirty = false;
                 __instance.grid.Clear(0);
@@ -106,6 +117,7 @@ namespace PogoAI.Patches
                     Log.Error($"Smarter Raid AI: {e.Message}\n{e.StackTrace}");
                 }
 
+                lastUpdateTicks = Find.TickManager.TicksGame;
                 return false;
             }
 

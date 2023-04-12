@@ -8,6 +8,8 @@ using System.Threading.Tasks;
 using Verse.AI;
 using Verse;
 using Unity.Jobs;
+using static UnityEngine.GraphicsBuffer;
+using Mono.Unix.Native;
 
 namespace PogoAI.Patches
 {
@@ -23,36 +25,25 @@ namespace PogoAI.Patches
 
             static void Postfix(Pawn pawn, ref Job __result)
             {
-                if (__result?.targetA.Thing?.Position != null && (pawn.equipment?.PrimaryEq?.PrimaryVerb?.IsMeleeAttack ?? true))
+                if (__result != null && __result.def == JobDefOf.AttackMelee && 
+                    __result?.targetA.Thing?.Position != null && (pawn.equipment?.PrimaryEq?.PrimaryVerb?.IsMeleeAttack ?? true))
                 {
-#if DEBUG
+                    var target = __result.targetA.Thing.Position;
+                    var sidesBlocked = Utilities.GetBlockedSides(pawn);                    
+                    if (__result.def == JobDefOf.AttackMelee && sidesBlocked == 4 && !ReachabilityImmediate.CanReachImmediate(pawn.Position, target
+                        , pawn.Map, PathEndMode.Touch, null))
+                    {
+                        __result = Utilities.GetTrashNearbyWallJob(pawn, 1);                        
+                    }
                     if (__result != null)
                     {
-                        Find.CurrentMap.debugDrawer.FlashCell(pawn.Position, 0.8f, $"Fight", 60);
+                        __result.collideWithPawns = true;
+                        __result.expiryInterval = 60;
+                        __result.expireRequiresEnemiesNearby = false;
+                        __result.ignoreDesignations = true;
+                        __result.checkOverrideOnExpire = true;
                     }
-#endif
-                    using (PawnPath pawnPath = pawn.Map.pathFinder.FindPath(pawn.Position, __result.targetA.Thing.Position,
-                            TraverseParms.For(pawn, Danger.Deadly, TraverseMode.ByPawn, false, false, false), PathEndMode.Touch, null))
-                    {
-                        if (pawnPath == PawnPath.NotFound || pawnPath.nodes.Any(x => PawnUtility.AnyPawnBlockingPathAt(x, pawn, true, false, false)))
-                        {
-                            __result = Utilities.GetTrashNearbyWallJob(pawn, 10);
-                            if (__result == null)
-                            {
-                                IntVec3 intVec = CellFinder.RandomClosewalkCellNear(pawn.Position, pawn.Map, 10, null);
-                                __result = JobMaker.MakeJob(JobDefOf.Goto, intVec, 500, true);
-                            }
-                            if (__result != null)
-                            {
-                                __result.collideWithPawns = true;
-                                __result.expiryInterval = 120;
-                                __result.expireRequiresEnemiesNearby = false;
-                                __result.ignoreDesignations = true;
-                                __result.checkOverrideOnExpire = true;
-                            }
-                        }
-                    }
-                }
+                }                
             }
         }
     }

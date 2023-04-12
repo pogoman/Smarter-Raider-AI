@@ -6,6 +6,7 @@ using Verse.AI;
 using Verse;
 using Verse.AI.Group;
 using Unity.Jobs;
+using static UnityEngine.GraphicsBuffer;
 
 namespace PogoAI.Patches
 {
@@ -19,32 +20,42 @@ namespace PogoAI.Patches
             public IAttackTarget attackTarget;
             public Thing blockingThing;
             public IntVec3 cellBefore;
-            public IntVec3 cellAfter;
             public List<int> excludeList = new List<int>();
 
-            public CachedPath(Pawn pawn, IAttackTarget targetThing, Thing blockingThing, IntVec3 cellBefore, IntVec3 cellAfter)
+            public CachedPath(Pawn pawn, IAttackTarget targetThing, Thing blockingThing, IntVec3 cellBefore)
             {
                 this.pawn = pawn;
                 this.attackTarget = targetThing;
                 this.blockingThing = blockingThing;
                 this.cellBefore = cellBefore;
-                this.cellAfter = cellAfter;
             }
         }
 
         public class CustomTuning : PathFinderCostTuning.ICustomizer
         {
-            public CustomTuning()
+            Pawn pawn;
+
+            public CustomTuning(Pawn pawn)
             {
-                excludeCells = new List<IntVec3>();
+                this.pawn = pawn;
             }
 
             public int CostOffset(IntVec3 from, IntVec3 to)
-            {                
-                return excludeCells.Contains(from) ? 10000 : 0;
+            {
+                if (pawn != null)
+                {
+                    var edifice = from.GetEdifice(pawn.Map);
+                    if (edifice != null && edifice.def.passability == Traversability.Impassable && !pawn.CanReserve(edifice))
+                    {
+                        return 10000;
+                    }
+                    else if (PawnUtility.AnyPawnBlockingPathAt(from, pawn, true, false, false))
+                    {
+                        return 10000;
+                    }
+                }
+                return 0;
             }
-
-            public List<IntVec3> excludeCells;
 
         }
 
@@ -55,11 +66,12 @@ namespace PogoAI.Patches
             costBlockedWallExtraPerHitPoint = 5,
             costBlockedDoor = 0,
             costBlockedDoorPerHitPoint = 5,
-            costBlockedWallExtraForNaturalWalls = 0,
-            custom = new CustomTuning()
+            costBlockedWallExtraForNaturalWalls = 0
         };
 
         public static List<CachedPath> pathCostCache = new List<CachedPath>();
+
+        public static bool findNewPaths = true;
 
         [HarmonyPatch(typeof(RimWorld.JobGiver_AISapper), "TryGiveJob")]
         public static class JobGiver_AISapper_TryGiveJob_Patch
@@ -70,9 +82,7 @@ namespace PogoAI.Patches
                 {
                     return true;
                 }
-#if DEBUG
-                Find.CurrentMap.debugDrawer.FlashCell(pawn.Position, 0.8f, $"Sap", 60);
-#endif
+
                 IntVec3 intVec = pawn.mindState.duty.focus.Cell;
                 if (intVec.IsValid && (float)intVec.DistanceToSquared(pawn.Position) < 100f && intVec.GetRoom(pawn.Map) == pawn.GetRoom(RegionType.Set_All) 
                     && intVec.WithinRegions(pawn.Position, pawn.Map, 9, TraverseMode.NoPassClosedDoors, RegionType.Set_Passable))
@@ -84,51 +94,80 @@ namespace PogoAI.Patches
                 var potentials = pawn.Map.attackTargetsCache.GetPotentialTargetsFor(pawn).Where(x => !x.ThreatDisabled(pawn) && x.Thing.Faction == Faction.OfPlayer
                     && pawn.CanReach(x.Thing, PathEndMode.OnCell, Danger.Deadly, false, false, TraverseMode.PassAllDestroyableThings));
 
-                pathCostCache.RemoveAll(x => x.attackTarget.ThreatDisabled(pawn) || (x.blockingThing != null && x.blockingThing.Position.GetRegion(pawn.Map, RegionType.Set_Passable) != null));
-                CachedPath memoryValue = pathCostCache.FirstOrDefault();
+                if (pathCostCache.RemoveAll(x => x.attackTarget.ThreatDisabled(pawn) || x.attackTarget.Thing.Destroyed
+                    || (x.blockingThing != null && x.blockingThing.Position.GetRegion(pawn.Map, RegionType.Set_Passable) != null)) > 0)
+                {
+                    findNewPaths = true;
+                }
 
+                var memoryValue = pathCostCache.OrderBy(x => pawn.Position.DistanceTo(x.cellBefore))
+                    .FirstOrDefault(x => x.blockingThing == null || pawn.CanReserve(x.blockingThing));                
                 IAttackTarget attackTarget = null;
+
                 if (memoryValue != null)
                 {
                     intVec = memoryValue.attackTarget.Thing.Position;
                     attackTarget = memoryValue.attackTarget;
                 }
 
-                if (!intVec.IsValid || attackTarget == null)
-                {
-                    memoryValue = null;
-                    attackTarget = potentials.OrderBy(x => pawn.Map.avoidGrid.grid[x.Thing.Position]).ThenBy(x => x.Thing.Position.DistanceTo(pawn.Position)).FirstOrDefault();
-#if DEBUG
-                    Log.Message($"new target: {attackTarget}");
-#endif
-                    if (attackTarget == null)
+                if (findNewPaths)
+                {   
+                    if (!intVec.IsValid || attackTarget == null)
                     {
-                        return false;
-                    }
-                    intVec = attackTarget.Thing.Position;
+                        memoryValue = null;
+                        attackTarget = potentials.OrderBy(x => pawn.Map.avoidGrid.grid[x.Thing.Position]).ThenBy(x => x.Thing.Position.DistanceTo(pawn.Position)).FirstOrDefault();
 #if DEBUG
-                    Find.CurrentMap.debugDrawer.FlashCell(pawn.Position, 0.7f, attackTarget.Thing.def.defName, 300);
+                        Log.Message($"new target: {attackTarget}");
 #endif
-                }
-
-                if (memoryValue == null)
-                {                   
-                    using (PawnPath pawnPath = pawn.Map.pathFinder.FindPath(pawn.Position, intVec,
-                        TraverseParms.For(pawn, Danger.Deadly, TraverseMode.PassAllDestroyableThings, false, true, false), PathEndMode.OnCell, customTuning))
-                    {
-                        IntVec3 cellBeforeBlocker = IntVec3.Invalid;
-                        IntVec3 cellAfterBlocker = IntVec3.Invalid;
-                        Thing blockingThing = FirstBlockingBuilding(pawnPath, out cellBeforeBlocker, out cellAfterBlocker, pawn);
-                        IntVec3 cellBeforeTarget = IntVec3.Invalid;
-                        memoryValue = new CachedPath(pawn, attackTarget, blockingThing, cellBeforeBlocker, cellAfterBlocker);
-                        pathCostCache.Add(memoryValue);
-                        if (blockingThing != null)
+                        if (attackTarget == null)
                         {
-                            ((CustomTuning)customTuning.custom).excludeCells.Add(cellBeforeBlocker);
+                            return false;
+                        }
+                        intVec = attackTarget.Thing.Position;
+#if DEBUG
+                        Find.CurrentMap.debugDrawer.FlashCell(pawn.Position, 0.7f, attackTarget.Thing.def.defName, 300);
+#endif
+                    }
+
+                    if (memoryValue == null)
+                    {
+                        customTuning.custom = new CustomTuning(pawn);
+                        using (PawnPath pawnPath = pawn.Map.pathFinder.FindPath(pawn.Position, intVec,
+                            TraverseParms.For(pawn, Danger.Deadly, TraverseMode.PassAllDestroyableThings, false, true, false), PathEndMode.OnCell, customTuning))
+                        {
+                            IntVec3 cellBeforeBlocker = IntVec3.Invalid;
+                            Thing blockingThing = pawnPath.FirstBlockingBuilding(out cellBeforeBlocker, pawn);
+                            if (blockingThing == null && pawnPath.nodes.Count > 1)
+                            {
+                                cellBeforeBlocker = pawnPath.nodes[1];
+                            }
+                            else
+                            {
+#if DEBUG
+                                Find.CurrentMap.debugDrawer.FlashCell(blockingThing.Position, 1f, "blocker", 300);
+#endif
+                            }
+                            memoryValue = pathCostCache.FirstOrDefault(x => x.cellBefore == cellBeforeBlocker);
+                            if (memoryValue == null)
+                            {
+                                memoryValue = new CachedPath(pawn, attackTarget, blockingThing, cellBeforeBlocker);
+                                pathCostCache.Add(memoryValue);
+                            }
+                            else
+                            {
+                                findNewPaths = false;
+                            }
                         }
                     }
                 }
+                else if (memoryValue == null)
+                {
+                    memoryValue = pathCostCache.First();
+                }
 
+#if DEBUG
+                Find.CurrentMap.debugDrawer.FlashCell(pawn.Position, 0.8f, $"{memoryValue.attackTarget}", 60);
+#endif
                 __result = GetSapJob(pawn, memoryValue);
                 return false;
             }            
@@ -139,29 +178,31 @@ namespace PogoAI.Patches
                 var blockingThing = memoryValue.blockingThing;
                 if (memoryValue.blockingThing == null)
                 {
-                    cellBeforeBlocker = memoryValue.attackTarget.Thing.Position;
                     blockingThing = memoryValue.attackTarget.Thing;
                 }
-                Job job = null;                
+                var distanceToTarget = pawn.Position.DistanceTo(cellBeforeBlocker);
+                Job job = null;               
                 
-                if (pawn.CanReserve(blockingThing))
+                if (true)
                 {
                     if (memoryValue.blockingThing != null && memoryValue.blockingThing.def.mineable && !StatDefOf.MiningSpeed.Worker.IsDisabledFor(pawn))
                     {
-                        job = JobMaker.MakeJob(JobDefOf.Mine, blockingThing);
+                        if (pawn.CanReserve(blockingThing))
+                        {
+                            job = JobMaker.MakeJob(JobDefOf.Mine, blockingThing);
+                        }
                     }
                     else
                     {
                         job = JobMaker.MakeJob(JobDefOf.AttackMelee, blockingThing);
                     }
-                    job.expireRequiresEnemiesNearby = false;
                 }
-                else
+                if (job == null)
                 {
-                    Job trashJob = null;                     
-                    if (pawn.Position.DistanceTo(cellBeforeBlocker) < 15)
+                    Job trashJob = null;
+                    if (distanceToTarget < 15)
                     {
-                        trashJob = Utilities.GetTrashNearbyWallJob(pawn, 10);
+                        trashJob = Utilities.GetTrashNearbyWallJob(pawn, 5);
                     }
                     if (trashJob != null)
                     {
@@ -178,65 +219,6 @@ namespace PogoAI.Patches
                 job.checkOverrideOnExpire = true;
                 job.expireRequiresEnemiesNearby = false;
                 return job;
-            }
-
-            private static Thing FirstBlockingBuilding(PawnPath path, out IntVec3 cellBefore, out IntVec3 cellAfter, Pawn pawn)
-            {
-                cellBefore = IntVec3.Invalid;
-                cellAfter = IntVec3.Invalid;
-                if (!path.Found)
-                {
-                    return null;
-                }
-                List<IntVec3> nodesReversed = path.NodesReversed;
-                if (nodesReversed.Count == 1)
-                {
-                    cellBefore = nodesReversed[0];
-                    return null;
-                }
-                Building building = null;
-                IntVec3 intVec = IntVec3.Invalid;
-                for (int i = nodesReversed.Count - 2; i >= 0; i--)
-                {
-#if DEBUG
-                        Find.CurrentMap.debugDrawer.FlashCell(nodesReversed[i], 0.5f, "block", 60);
-#endif
-                    Building edifice = nodesReversed[i].GetEdifice(pawn.Map);
-                    if (edifice != null)
-                    {
-                        Building_Door building_Door = edifice as Building_Door;
-                        bool flag = building_Door != null && !building_Door.FreePassage && !building_Door.PawnCanOpen(pawn);
-                        bool flag2 = edifice.def.IsFence && !pawn.def.race.CanPassFences;
-                        if (flag || flag2 || edifice.def.passability == Traversability.Impassable)
-                        {
-                            if (building != null)
-                            {
-                                cellBefore = intVec;
-                                return building;
-                            }
-                            cellBefore = nodesReversed[i + 1];
-                            if (i - 1 > 0)
-                            {
-                                cellAfter = nodesReversed[i - 1];
-                            }
-                            return edifice;
-                        }
-                    }
-                    if (edifice != null && edifice.def.passability == Traversability.PassThroughOnly && edifice.def.Fillage == FillCategory.Full)
-                    {
-                        if (building == null)
-                        {
-                            building = edifice;
-                            intVec = nodesReversed[i + 1];
-                        }
-                    }
-                    else if (edifice == null || edifice.def.passability != Traversability.PassThroughOnly)
-                    {
-                        building = null;
-                    }
-                }
-                cellBefore = nodesReversed[0];
-                return null;
             }
         }
     }

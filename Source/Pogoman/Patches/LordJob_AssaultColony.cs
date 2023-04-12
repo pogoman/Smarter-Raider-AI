@@ -1,11 +1,6 @@
 ﻿using HarmonyLib;
 using RimWorld;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Verse;
 
 namespace PogoAI.Patches
 {
@@ -20,6 +15,8 @@ namespace PogoAI.Patches
                 __instance.breachers = true;
                 __instance.useAvoidGridSmart = true;
                 BreachingUtility.breachMineables = false;
+                JobGiver_AISapper.pathCostCache.Clear();
+                JobGiver_AISapper.findNewPaths = true;
             }
         }
     }

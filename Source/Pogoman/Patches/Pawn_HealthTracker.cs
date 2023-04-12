@@ -20,7 +20,7 @@ namespace PogoAI.Patches
             if (__instance.pawn.Position.IsValid && __instance.pawn.Faction.HostileTo(Faction.OfPlayer) && __instance.pawn.Faction != Faction.OfInsects)
             {
                 AvoidGrid.AvoidGrid_Regenerate.PrintAvoidGridAroundPos(__instance.pawn.Map.avoidGrid, __instance.pawn.Map, __instance.pawn.Position, 1, 1000);
-                if (Utilities.GetNearbyThing(__instance.pawn, ThingDefOf.TrapSpike, 5) != null)
+                if (Utilities.GetNearestThing(__instance.pawn, ThingDefOf.TrapSpike, 5) != null)
                 {
                     if (Patches.JobGiver_AISapper.pathCostCache.Count > 0)
                     {

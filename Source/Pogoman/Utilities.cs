@@ -12,6 +12,28 @@ namespace PogoAI
 {
     public static class Utilities
     {
+        /// <summary>
+        /// 1 - 4
+        /// </summary>
+        /// <param name="pawn"></param>
+        /// <returns></returns>
+        public static int GetBlockedSides(Pawn pawn)
+        {
+            var frontCell = pawn.Position + pawn.Rotation.FacingCell;
+            var frontEdifice = frontCell.GetEdifice(pawn.Map);
+            var frontBlocked = (frontEdifice == null ? false : frontEdifice.GetRegion(RegionType.Set_Passable) == null) || PawnUtility.AnyPawnBlockingPathAt(frontCell, pawn, true, false, false);
+            var behindCell = pawn.Position + pawn.Rotation.Opposite.FacingCell;
+            var behindEdifice = behindCell.GetEdifice(pawn.Map);
+            var behindBlocked = (behindEdifice == null ? false : behindEdifice.GetRegion(RegionType.Set_Passable) == null) || PawnUtility.AnyPawnBlockingPathAt(behindCell, pawn, true, false, false);
+            var rightCell = pawn.Position + pawn.Rotation.RighthandCell;
+            var rightEdifice = rightCell.GetEdifice(pawn.Map);
+            var rightBlocked = (rightEdifice == null ? false : rightEdifice.GetRegion(RegionType.Set_Passable) == null) || PawnUtility.AnyPawnBlockingPathAt(rightCell, pawn, true, false, false);
+            var leftCell = pawn.Position - pawn.Rotation.RighthandCell;
+            var leftEdifice = leftCell.GetEdifice(pawn.Map);
+            var leftBlocked = (leftEdifice == null ? false : leftEdifice.GetRegion(RegionType.Set_Passable) == null) || PawnUtility.AnyPawnBlockingPathAt(leftCell, pawn, true, false, false);
+            return new bool[] { frontBlocked, behindBlocked, leftBlocked, rightBlocked }.Count(x => x);
+        }
+
         public static Job GetTrashNearbyWallJob(Pawn pawn, int radius)
         {
             Job job = null;
@@ -77,7 +99,7 @@ namespace PogoAI
             return job;
         }
 
-        public static Thing GetNearbyThing(Pawn pawn, ThingDef thingDef, int radius)
+        public static Thing GetNearestThing(Pawn pawn, ThingDef thingDef, int radius)
         {
             Building building = null;
             for (int i = 0; i < GenRadial.NumCellsInRadius(radius); i++)
@@ -94,6 +116,24 @@ namespace PogoAI
                 }
             }
             return building;
+        }
+
+        public static IntVec3 GetNearestEmptyCell(Pawn pawn, int radius)
+        {
+            IntVec3 intVec = IntVec3.Invalid;
+            for (int i = 1; i < GenRadial.NumCellsInRadius(radius); i++)
+            {
+                intVec = pawn.Position + GenRadial.RadialPattern[i];
+                if (intVec.InBounds(pawn.Map))
+                {
+                    var edifice = intVec.GetEdifice(pawn.Map);
+                    if ((edifice == null || edifice.GetRegion(RegionType.Set_Passable) != null) && !PawnUtility.AnyPawnBlockingPathAt(intVec, pawn))
+                    {
+                        break;
+                    }
+                }
+            }
+            return intVec;
         }
     }
 }
