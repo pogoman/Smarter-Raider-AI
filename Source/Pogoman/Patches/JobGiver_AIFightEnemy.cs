@@ -30,7 +30,7 @@ namespace PogoAI.Patches
                     var target = __result.targetA.Thing.Position;
                     if (pawn.Position.DistanceTo(target) > 3)
                     {
-                        if (Utilities.PawnBlocked(pawn))
+                        if (Utilities.PawnBlocked(pawn, pawn.Position + pawn.Rotation.Opposite.FacingCell))
                         {
                             __result = Utilities.GetTrashNearbyWallJob(pawn, 1);
                             if (__result != null)
@@ -45,7 +45,6 @@ namespace PogoAI.Patches
                     }
                     else
                     {
-                        Find.CurrentMap.debugDrawer.FlashCell(pawn.Position, 0.2f, $"FE", 60);
                         Utilities.MaybeMoveOutTheWayJob(pawn, target, ref __result);
                     }
                 }          

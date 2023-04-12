@@ -12,8 +12,6 @@ namespace PogoAI.Patches
 {
     public static class JobGiver_AISapper
     {
-        const int minPathLengthToCache = 0;
-
         public class CachedPath
         {
             public Pawn pawn;
@@ -101,7 +99,7 @@ namespace PogoAI.Patches
                 }
 
                 var memoryValue = pathCostCache.OrderBy(x => pawn.Position.DistanceTo(x.cellBefore))
-                    .FirstOrDefault(x => x.blockingThing == null || pawn.CanReserve(x.blockingThing));                
+                    .FirstOrDefault(x => (x.blockingThing == null && !Utilities.PawnBlocked(x.attackTarget.Thing, IntVec3.Invalid)) || pawn.CanReserve(x.blockingThing));                
                 IAttackTarget attackTarget = null;
 
                 if (memoryValue != null)
@@ -115,7 +113,8 @@ namespace PogoAI.Patches
                     if (!intVec.IsValid || attackTarget == null)
                     {
                         memoryValue = null;
-                        attackTarget = potentials.OrderBy(x => pawn.Map.avoidGrid.grid[x.Thing.Position]).ThenBy(x => x.Thing.Position.DistanceTo(pawn.Position)).FirstOrDefault();
+                        attackTarget = potentials.OrderBy(x => pawn.Map.avoidGrid.grid[x.Thing.Position]).ThenBy(x => x.Thing.Position.DistanceTo(pawn.Position))
+                            .FirstOrDefault(x => !Utilities.PawnBlocked(x.Thing, IntVec3.Invalid));
 #if DEBUG
                         Log.Message($"new target: {attackTarget}");
 #endif
@@ -166,7 +165,7 @@ namespace PogoAI.Patches
                 }
 
 #if DEBUG
-                Find.CurrentMap.debugDrawer.FlashCell(pawn.Position, 0.8f, $"{memoryValue.attackTarget.ToString().Substring(0, 3)}\n{memoryValue.cellBefore}", 60);
+                Find.CurrentMap.debugDrawer.FlashCell(pawn.Position, 0.8f, $"{memoryValue.attackTarget}", 60);
 #endif
                 __result = GetSapJob(pawn, memoryValue);
                 return false;
@@ -196,7 +195,7 @@ namespace PogoAI.Patches
                 }
                 if (job == null || job.def == JobDefOf.AttackMelee)
                 {
-                    if (Utilities.PawnBlocked(pawn))
+                    if (distanceToTarget < 3 && Utilities.PawnBlocked(pawn, IntVec3.Invalid))
                     {
                         job = Utilities.GetTrashNearbyWallJob(pawn, 1);
                     }

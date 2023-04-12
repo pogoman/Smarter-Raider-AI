@@ -19,7 +19,6 @@ namespace PogoAI.Patches
                     var target = __result.targetA.Thing.Position;
                     if (ReachabilityImmediate.CanReachImmediate(pawn.Position, target, pawn.Map, PathEndMode.Touch, null))
                     {
-                        Find.CurrentMap.debugDrawer.FlashCell(pawn.Position, 0.1f, $"CC", 60);
                         Utilities.MaybeMoveOutTheWayJob(pawn, target, ref __result);
                     }
                 }

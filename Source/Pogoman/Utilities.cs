@@ -80,7 +80,12 @@ namespace PogoAI
 
         public static void MaybeMoveOutTheWayJob(Pawn pawn, IntVec3 target, ref Job __result)
         {
-            if (GetNearestThingsCategory(pawn, ThingCategory.Pawn, 1).Where(x => x.Faction == pawn.Faction).Any(x => PawnBlocked((Pawn)x)))
+            if (PawnBlocked(pawn, IntVec3.Invalid))
+            {
+                //Cant move anyway
+                return;
+            }
+            if (GetNearestBlockingThingsCategory(pawn, 1, IntVec3.Invalid).Where(x => x.Faction == pawn.Faction).Any(x => PawnBlocked((Pawn)x, x.Position + x.Rotation.Opposite.FacingCell)))
             {
                 IntVec3 intVec = GetNearestEmptyCell(pawn, 5, target);
                 if (intVec.IsValid)
@@ -97,21 +102,21 @@ namespace PogoAI
             }
         }
 
-        public static bool PawnBlocked(Pawn pawn)
+        public static bool PawnBlocked(Thing thing, IntVec3 ignoreCell)
         {
-            Log.Message($"checking {pawn} {CountSurroundingImpassable(pawn, 1) + GetNearestThingsCategory(pawn, ThingCategory.Pawn, 1).Count(x => x.Faction == pawn.Faction)}");
-            return CountSurroundingImpassable(pawn, 1) + GetNearestThingsCategory(pawn, ThingCategory.Pawn, 1).Count(x => x.Faction == pawn.Faction) == 4;
+            return CountSurroundingImpassable(thing, 1, ignoreCell) + GetNearestBlockingThingsCategory(thing, 1, ignoreCell)
+                .Count(x => x.Faction == thing.Faction) == (!ignoreCell.IsValid ? 4 : 3);
         }
 
-        public static int CountSurroundingImpassable(Pawn pawn, int radius)
+        public static int CountSurroundingImpassable(Thing thing, int radius, IntVec3 ignoreCell)
         {
             var count = 0;
             for (int i = 1; i < GenRadial.NumCellsInRadius(radius); i++)
             {
-                IntVec3 c = pawn.Position + GenRadial.RadialPattern[i];
-                if (c.InBounds(pawn.Map))
+                IntVec3 c = thing.Position + GenRadial.RadialPattern[i];
+                if (c.InBounds(thing.Map) && c != ignoreCell)
                 {
-                    var edifice = c.GetEdifice(pawn.Map);
+                    var edifice = c.GetEdifice(thing.Map);
                     if (edifice != null && edifice.GetRegion(RegionType.Set_Passable) == null)
                     {
                         count++;
@@ -121,18 +126,27 @@ namespace PogoAI
             return count;
         }
 
-        public static List<Thing> GetNearestThingsCategory(Pawn pawn, ThingCategory cat, int radius)
+        public static List<Thing> GetNearestBlockingThingsCategory(Thing thing, int radius, IntVec3 ignoreCell)
         {
             var things = new List<Thing>();
             for (int i = 1; i < GenRadial.NumCellsInRadius(radius); i++)
             {
-                IntVec3 c = pawn.Position + GenRadial.RadialPattern[i];
-                if (c.InBounds(pawn.Map))
+                IntVec3 c = thing.Position + GenRadial.RadialPattern[i];
+                if (c.InBounds(thing.Map) && c != ignoreCell)
                 {
-                    var thing = pawn.Map.thingGrid.ThingAt(c, cat);
-                    if (thing != null)
+                    Thing blockingThing = thing.Map.thingGrid.ThingsAt(c).FirstOrDefault(x => x is Building ||  (x is Pawn && x.Faction == thing.Faction) || x.BlocksPawn(thing as Pawn));
+                    if (blockingThing != null)
                     {
-                        things.Add(thing);
+#if DEBUG
+                        Find.CurrentMap.debugDrawer.FlashCell(c, 0.1f, $"blocks", 60);
+#endif
+                        things.Add(blockingThing);
+                    }
+                    else
+                    {
+#if DEBUG
+                        Find.CurrentMap.debugDrawer.FlashCell(c, 0.5f, $"", 60);
+#endif
                     }
                 }
             }

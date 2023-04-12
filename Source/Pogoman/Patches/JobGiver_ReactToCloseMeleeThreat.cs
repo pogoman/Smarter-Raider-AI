@@ -15,7 +15,6 @@ namespace PogoAI.Patches
                 if (__result != null && __result.def == JobDefOf.AttackMelee && 
                     __result?.targetA.Thing?.Position != null && (pawn.equipment?.PrimaryEq?.PrimaryVerb?.IsMeleeAttack ?? true))
                 {
-                    Find.CurrentMap.debugDrawer.FlashCell(pawn.Position, 0.3f, $"RC", 60);
                     var target = __result.targetA.Thing.Position;
                     Utilities.MaybeMoveOutTheWayJob(pawn, target, ref __result);
                 }
