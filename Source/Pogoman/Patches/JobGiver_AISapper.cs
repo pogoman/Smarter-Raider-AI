@@ -166,7 +166,7 @@ namespace PogoAI.Patches
                 }
 
 #if DEBUG
-                Find.CurrentMap.debugDrawer.FlashCell(pawn.Position, 0.8f, $"{memoryValue.attackTarget}", 60);
+                Find.CurrentMap.debugDrawer.FlashCell(pawn.Position, 0.8f, $"{memoryValue.attackTarget.ToString().Substring(0, 3)}\n{memoryValue.cellBefore}", 60);
 #endif
                 __result = GetSapJob(pawn, memoryValue);
                 return false;
@@ -183,32 +183,24 @@ namespace PogoAI.Patches
                 var distanceToTarget = pawn.Position.DistanceTo(cellBeforeBlocker);
                 Job job = null;               
                 
-                if (true)
+                if (memoryValue.blockingThing != null && memoryValue.blockingThing.def.mineable && !StatDefOf.MiningSpeed.Worker.IsDisabledFor(pawn))
                 {
-                    if (memoryValue.blockingThing != null && memoryValue.blockingThing.def.mineable && !StatDefOf.MiningSpeed.Worker.IsDisabledFor(pawn))
+                    if (pawn.CanReserve(blockingThing))
                     {
-                        if (pawn.CanReserve(blockingThing))
-                        {
-                            job = JobMaker.MakeJob(JobDefOf.Mine, blockingThing);
-                        }
-                    }
-                    else
-                    {
-                        job = JobMaker.MakeJob(JobDefOf.AttackMelee, blockingThing);
+                        job = JobMaker.MakeJob(JobDefOf.Mine, blockingThing);
                     }
                 }
-                if (job == null)
+                else
                 {
-                    Job trashJob = null;
-                    if (distanceToTarget < 15)
+                    job = JobMaker.MakeJob(JobDefOf.AttackMelee, blockingThing);
+                }
+                if (job == null || job.def == JobDefOf.AttackMelee)
+                {
+                    if (Utilities.PawnBlocked(pawn))
                     {
-                        trashJob = Utilities.GetTrashNearbyWallJob(pawn, 5);
+                        job = Utilities.GetTrashNearbyWallJob(pawn, 1);
                     }
-                    if (trashJob != null)
-                    {
-                        job = trashJob;
-                    }
-                    else
+                    if (job == null)
                     {
                         job = DigUtility.WaitNearJob(pawn, cellBeforeBlocker);
                     }

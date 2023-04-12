@@ -25,25 +25,30 @@ namespace PogoAI.Patches
 
             static void Postfix(Pawn pawn, ref Job __result)
             {
-                if (__result != null && __result.def == JobDefOf.AttackMelee && 
-                    __result?.targetA.Thing?.Position != null && (pawn.equipment?.PrimaryEq?.PrimaryVerb?.IsMeleeAttack ?? true))
+                if (__result != null && __result.def == JobDefOf.AttackMelee && __result?.targetA.Thing?.Position != null)
                 {
                     var target = __result.targetA.Thing.Position;
-                    var sidesBlocked = Utilities.GetBlockedSides(pawn);                    
-                    if (__result.def == JobDefOf.AttackMelee && sidesBlocked == 4 && !ReachabilityImmediate.CanReachImmediate(pawn.Position, target
-                        , pawn.Map, PathEndMode.Touch, null))
+                    if (pawn.Position.DistanceTo(target) > 3)
                     {
-                        __result = Utilities.GetTrashNearbyWallJob(pawn, 1);                        
+                        if (Utilities.PawnBlocked(pawn))
+                        {
+                            __result = Utilities.GetTrashNearbyWallJob(pawn, 1);
+                            if (__result != null)
+                            {
+                                __result.collideWithPawns = true;
+                                __result.expiryInterval = 60;
+                                __result.expireRequiresEnemiesNearby = false;
+                                __result.ignoreDesignations = true;
+                                __result.checkOverrideOnExpire = true;
+                            }
+                        }
                     }
-                    if (__result != null)
+                    else
                     {
-                        __result.collideWithPawns = true;
-                        __result.expiryInterval = 60;
-                        __result.expireRequiresEnemiesNearby = false;
-                        __result.ignoreDesignations = true;
-                        __result.checkOverrideOnExpire = true;
+                        Find.CurrentMap.debugDrawer.FlashCell(pawn.Position, 0.2f, $"FE", 60);
+                        Utilities.MaybeMoveOutTheWayJob(pawn, target, ref __result);
                     }
-                }                
+                }          
             }
         }
     }
