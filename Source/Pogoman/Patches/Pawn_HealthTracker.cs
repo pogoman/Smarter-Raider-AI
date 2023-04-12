@@ -22,11 +22,15 @@ namespace PogoAI.Patches
                 AvoidGrid.AvoidGrid_Regenerate.PrintAvoidGridAroundPos(__instance.pawn.Map.avoidGrid, __instance.pawn.Map, __instance.pawn.Position, 1, 1000);
                 if (Utilities.GetNearbyThing(__instance.pawn, ThingDefOf.TrapSpike, 5) != null)
                 {
-                    var nearbyRaiders = __instance.pawn.Map.mapPawns.PawnsInFaction(__instance.pawn.Faction).Where(x => x.Position.DistanceTo(__instance.pawn.Position) <= 5);
-                    foreach (var raider in nearbyRaiders)
+                    if (Patches.JobGiver_AISapper.pathCostCache.Count > 0)
                     {
-                        raider.jobs.StopAll();
-                        raider.jobs.StartJob(JobMaker.MakeJob(JobDefOf.Wait, 20, true), JobCondition.InterruptForced, null, false, true, null, null, false, false, null, false, true);
+                        Patches.JobGiver_AISapper.pathCostCache.RemoveAt(0);
+                        var nearbyRaiders = __instance.pawn.Map.mapPawns.PawnsInFaction(__instance.pawn.Faction).Where(x => x.Position.DistanceTo(__instance.pawn.Position) <= 5);
+                        foreach (var raider in nearbyRaiders)
+                        {
+                            raider.jobs.StopAll();
+                            raider.jobs.StartJob(JobMaker.MakeJob(JobDefOf.Wait, 20, true), JobCondition.InterruptForced, null, false, true, null, null, false, false, null, false, true);
+                        }
                     }
                 }
             }

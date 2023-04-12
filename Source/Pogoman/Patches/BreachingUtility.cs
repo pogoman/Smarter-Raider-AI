@@ -8,8 +8,10 @@ using static RimWorld.BreachingUtility;
 
 namespace PogoAI.Patches
 {
-    internal class BreachingUtility
+    public class BreachingUtility
     {
+        public static bool breachMineables = false;
+
         [HarmonyPatch(typeof(BreachRangedCastPositionFinder), "SafeForRangedCast")]
         static class BreachRangedCastPositionFinder_SafeForRangedCast
         {
@@ -91,7 +93,19 @@ namespace PogoAI.Patches
                 if (__result)
                 {
                     Building edifice = c.GetEdifice(map);
-                    __result = edifice?.Faction == Faction.OfPlayer;
+                    __result = edifice?.Faction == Faction.OfPlayer || (breachMineables && edifice.def.mineable);
+                }
+            }
+        }
+
+        [HarmonyPatch(typeof(Verse.AI.BreachingGrid), "FindBuildingToBreach")]
+        static class FindBuildingToBreach_FindBuildingToBreach
+        {
+            static void Postfix(ref Thing __result)
+            {
+                if (__result == null && !breachMineables)
+                {
+                    breachMineables = true;
                 }
             }
         }

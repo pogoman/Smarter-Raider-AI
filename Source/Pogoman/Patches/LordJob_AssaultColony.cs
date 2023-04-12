@@ -19,6 +19,7 @@ namespace PogoAI.Patches
             {
                 __instance.breachers = true;
                 __instance.useAvoidGridSmart = true;
+                BreachingUtility.breachMineables = false;
             }
         }
     }
