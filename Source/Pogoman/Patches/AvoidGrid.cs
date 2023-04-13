@@ -34,9 +34,6 @@ namespace PogoAI.Patches
                 if (lastUpdateTicks != 0 && (Find.TickManager.TicksGame - lastUpdateTicks) % 60 < 5)
                 {
                     __instance.gridDirty = false;
-#if DEBUG
-                    Log.Message($"Avoid grid tried to update at {(Find.TickManager.TicksGame - lastUpdateTicks) % 60}");
-#endif
                     return false;
                 }
 

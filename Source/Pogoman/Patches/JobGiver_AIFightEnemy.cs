@@ -28,11 +28,23 @@ namespace PogoAI.Patches
                 if (__result != null && __result.def == JobDefOf.AttackMelee && __result?.targetA.Thing?.Position != null)
                 {
                     var target = __result.targetA.Thing.Position;
-                    if (pawn.Position.DistanceTo(target) > 3 && !pawn.CanReachImmediate(target, PathEndMode.Touch) 
-                        && (Utilities.ThingBlocked(__result.targetA.Thing, IntVec3.Invalid) || Utilities.ThingBlocked(pawn, pawn.Position + pawn.Rotation.Opposite.FacingCell))
-                        || !pawn.pather.MovedRecently(120))
+                    if (pawn.Position.DistanceTo(target) > 3 && !pawn.CanReachImmediate(target, PathEndMode.Touch))
                     {
-                        __result = null;
+                        if (Utilities.ThingBlocked(__result.targetA.Thing, IntVec3.Invalid, true))
+                        {
+                            __result = null;
+                        }
+                        else
+                        {
+                            using (PawnPath pawnPath = pawn.Map.pathFinder.FindPath(pawn.Position, __result.targetA.Thing.Position,
+                                                        TraverseParms.For(pawn, Danger.Deadly, TraverseMode.ByPawn, false, false, false), PathEndMode.Touch))
+                            {
+                                if (pawnPath == PawnPath.NotFound || pawnPath.nodes.Any(x => PawnUtility.AnyPawnBlockingPathAt(x, pawn, true, true, false)))
+                                {
+                                    __result = null;
+                                }
+                            }
+                        }                        
                     }
                     else
                     {

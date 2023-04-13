@@ -1,36 +1,18 @@
 ﻿using RimWorld;
-using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Verse.AI;
 using Verse;
 using PogoAI.Extensions;
-using static UnityEngine.GraphicsBuffer;
-using Mono.Unix.Native;
-using Unity.Baselib.LowLevel;
 
 namespace PogoAI
 {
     public static class Utilities
     {
-        public static bool IsRoomWall(Building wall)
+        public static bool RoomIsBreached(Pawn pawn, IntVec3 roomCell)
         {
-            var intVec = wall.Position;
-            Building edifice = intVec.GetEdifice(Find.CurrentMap);
-            if (edifice != null)
-            {
-                foreach (IntVec3 intVec3 in edifice.OccupiedRect().ExpandedBy(1).ClipInsideMap(Find.CurrentMap))
-                {
-                    var room = intVec3.GetRoom(Find.CurrentMap);
-                    if (room != null && !room.PsychologicallyOutdoors)
-                    {
-                        return true;
-                    }
-                }
-            }
-            return false;
+            var room = roomCell.GetRoom(Find.CurrentMap);
+            return (room != null && room.PsychologicallyOutdoors) || (room == null && pawn.CanReach(roomCell, PathEndMode.Touch, Danger.Deadly));
         }
 
 
@@ -128,10 +110,11 @@ namespace PogoAI
             {
                 return; //Cant move anyway                
             }
-            if (GetPawnsInRadius(pawn, 1, IntVec3.Invalid).Where(x => x.Faction == pawn.Faction).Any(x => ThingBlocked((Pawn)x, x.Position + x.Rotation.Opposite.FacingCell)))
+            if (GetPawnsInRadius(pawn.Map, pawn.Position, 1, IntVec3.Invalid).Where(x => x.Faction == pawn.Faction)
+                .Any(x => ThingBlocked((Pawn)x, x.Position + x.Rotation.Opposite.FacingCell)))
             {
 #if DEBUG
-                Log.Message($"{pawn} {pawn.Position} moving out way to {intVec}");
+                //Log.Message($"{pawn} {pawn.Position} moving out way to {intVec}");
 #endif
                 __result = JobMaker.MakeJob(JobDefOf.Goto, intVec, 120, true);
                 __result.collideWithPawns = true;
@@ -146,7 +129,7 @@ namespace PogoAI
 
         public static bool ThingBlocked(Thing thing, IntVec3 ignoreCell, bool includeCorners = false)
         {
-            var count = CountSurroundingImpassable(thing, 1, ignoreCell, includeCorners) + GetPawnsInRadius(thing, 1, ignoreCell, includeCorners).Count;
+            var count = CountSurroundingImpassable(thing, 1, ignoreCell, includeCorners) + GetPawnsInRadius(thing.Map, thing.Position, 1, ignoreCell, includeCorners).Count;
 #if DEBUG
             Find.CurrentMap.debugDrawer.FlashCell(thing.Position, 1f, $"PB:{count}", 60); 
 #endif
@@ -183,15 +166,15 @@ namespace PogoAI
             return count;
         }
 
-        public static List<Thing> GetPawnsInRadius(Thing thing, int radius, IntVec3 ignoreCell, bool includeCorners = false)
+        public static List<Thing> GetPawnsInRadius(Map map, IntVec3 position, int radius, IntVec3 ignoreCell, bool includeCorners = false)
         {
             var things = new List<Thing>();
             for (int i = 1; i < GenRadial.NumCellsInRadius(radius); i++)
             {
-                IntVec3 c = thing.Position + GenRadial.RadialPattern[i];
-                if (c.InBounds(thing.Map) && c != ignoreCell)
+                IntVec3 c = position + GenRadial.RadialPattern[i];
+                if (c.InBounds(map) && c != ignoreCell)
                 {
-                    Thing blockingThing = thing.Map.thingGrid.ThingAt(c, ThingCategory.Pawn);
+                    Thing blockingThing = map.thingGrid.ThingAt(c, ThingCategory.Pawn);
                     if (blockingThing != null)
                     {
                         things.Add(blockingThing);
@@ -204,11 +187,11 @@ namespace PogoAI
                 IntVec3 tl;
                 IntVec3 tr;
                 IntVec3 br;
-                GenAdj.GetAdjacentCorners(thing.Position, out bl, out tl, out tr, out br);
+                GenAdj.GetAdjacentCorners(position, out bl, out tl, out tr, out br);
                 var corners = new IntVec3[] { bl, tl, tr, br };
                 foreach (var corner in corners)
                 {
-                    Thing blockingThing = thing.Map.thingGrid.ThingAt(corner, ThingCategory.Pawn);
+                    Thing blockingThing = map.thingGrid.ThingAt(corner, ThingCategory.Pawn);
                     if (blockingThing != null)
                     {
                         things.Add(blockingThing);
