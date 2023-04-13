@@ -30,21 +30,21 @@ namespace PogoAI.Patches
                     var target = __result.targetA.Thing.Position;
                     if (pawn.Position.DistanceTo(target) > 3 && !pawn.CanReachImmediate(target, PathEndMode.Touch))
                     {
-                        if (Utilities.ThingBlocked(__result.targetA.Thing, IntVec3.Invalid, true))
-                        {
-                            __result = null;
-                        }
-                        else
-                        {
-                            using (PawnPath pawnPath = pawn.Map.pathFinder.FindPath(pawn.Position, __result.targetA.Thing.Position,
-                                                        TraverseParms.For(pawn, Danger.Deadly, TraverseMode.ByPawn, false, false, false), PathEndMode.Touch))
-                            {
-                                if (pawnPath == PawnPath.NotFound || pawnPath.nodes.Any(x => PawnUtility.AnyPawnBlockingPathAt(x, pawn, true, true, false)))
-                                {
-                                    __result = null;
-                                }
-                            }
-                        }                        
+                        //if (Utilities.ThingBlocked(__result.targetA.Thing, IntVec3.Invalid, true))
+                        //{
+                        //    __result = null;
+                        //}
+                        //else
+                        //{
+                        //    using (PawnPath pawnPath = pawn.Map.pathFinder.FindPath(pawn.Position, __result.targetA.Thing.Position,
+                        //                                TraverseParms.For(pawn, Danger.Deadly, TraverseMode.ByPawn, false, false, false), PathEndMode.Touch))
+                        //    {
+                        //        if (pawnPath == PawnPath.NotFound || pawnPath.nodes.Any(x => PawnUtility.AnyPawnBlockingPathAt(x, pawn, true, true, false)))
+                        //        {
+                        //            __result = null;
+                        //        }
+                        //    }
+                        //}                        
                     }
                     else
                     {

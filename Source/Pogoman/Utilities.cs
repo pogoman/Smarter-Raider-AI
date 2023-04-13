@@ -105,25 +105,28 @@ namespace PogoAI
 
         public static void MaybeMoveOutTheWayJob(Pawn pawn, ref Job __result, Thing target = null)
         {
-            IntVec3 intVec = GetNearestEmptyCell(pawn, 1, target?.Position ?? pawn.Position);
-            if (!intVec.IsValid)
+            if (ThingBlocked(pawn, IntVec3.Invalid))
             {
                 return; //Cant move anyway                
             }
             if (GetPawnsInRadius(pawn.Map, pawn.Position, 1, IntVec3.Invalid).Where(x => x.Faction == pawn.Faction)
                 .Any(x => ThingBlocked((Pawn)x, x.Position + x.Rotation.Opposite.FacingCell)))
             {
+                IntVec3 intVec = GetNearestEmptyCell(pawn, 1, target?.Position ?? pawn.Position);
+                if (intVec.IsValid)
+                {
 #if DEBUG
-                //Log.Message($"{pawn} {pawn.Position} moving out way to {intVec}");
+                    //Log.Message($"{pawn} {pawn.Position} moving out way to {intVec}");
 #endif
-                __result = JobMaker.MakeJob(JobDefOf.Goto, intVec, 120, true);
-                __result.collideWithPawns = true;
-                __result.expireRequiresEnemiesNearby = false;
-                __result.ignoreDesignations = true;
-                __result.checkOverrideOnExpire = true;
+                    __result = JobMaker.MakeJob(JobDefOf.Goto, intVec, 120, true);
+                    __result.collideWithPawns = true;
+                    __result.expireRequiresEnemiesNearby = false;
+                    __result.ignoreDesignations = true;
+                    __result.checkOverrideOnExpire = true;
 #if DEBUG
-                Find.CurrentMap.debugDrawer.FlashCell(pawn.Position, 0.5f, $"UB:{intVec}", 60);
+                    Find.CurrentMap.debugDrawer.FlashCell(pawn.Position, 0.5f, $"UB:{intVec}", 60);
 #endif
+                }
             }
         }
 
@@ -174,8 +177,8 @@ namespace PogoAI
                 IntVec3 c = position + GenRadial.RadialPattern[i];
                 if (c.InBounds(map) && c != ignoreCell)
                 {
-                    Thing blockingThing = map.thingGrid.ThingAt(c, ThingCategory.Pawn);
-                    if (blockingThing != null)
+                    var blockingThing = map.thingGrid.ThingAt(c, ThingCategory.Pawn) as Pawn;
+                    if (blockingThing != null && !blockingThing.Downed)
                     {
                         things.Add(blockingThing);
                     }
