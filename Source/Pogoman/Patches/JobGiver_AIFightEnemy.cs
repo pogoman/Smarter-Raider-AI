@@ -28,26 +28,17 @@ namespace PogoAI.Patches
                 if (__result != null && __result.def == JobDefOf.AttackMelee && __result?.targetA.Thing?.Position != null)
                 {
                     var target = __result.targetA.Thing.Position;
-                    if (pawn.Position.DistanceTo(target) > 3)
+                    if (pawn.Position.DistanceTo(target) > 3 && !pawn.CanReachImmediate(target, PathEndMode.Touch) 
+                        && (Utilities.ThingBlocked(__result.targetA.Thing, IntVec3.Invalid) || Utilities.ThingBlocked(pawn, pawn.Position + pawn.Rotation.Opposite.FacingCell))
+                        || !pawn.pather.MovedRecently(120))
                     {
-                        if (Utilities.PawnBlocked(pawn, pawn.Position + pawn.Rotation.Opposite.FacingCell))
-                        {
-                            __result = Utilities.GetTrashNearbyWallJob(pawn, 1);
-                            if (__result != null)
-                            {
-                                __result.collideWithPawns = true;
-                                __result.expiryInterval = 60;
-                                __result.expireRequiresEnemiesNearby = false;
-                                __result.ignoreDesignations = true;
-                                __result.checkOverrideOnExpire = true;
-                            }
-                        }
+                        __result = null;
                     }
                     else
                     {
-                        Utilities.MaybeMoveOutTheWayJob(pawn, target, ref __result);
+                        Utilities.MaybeMoveOutTheWayJob(pawn, ref __result, __result.targetA.Thing);
                     }
-                }          
+                }
             }
         }
     }

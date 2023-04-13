@@ -17,9 +17,9 @@ namespace PogoAI.Patches
                     __result?.targetA.Thing?.Position != null)
                 {
                     var target = __result.targetA.Thing.Position;
-                    if (ReachabilityImmediate.CanReachImmediate(pawn.Position, target, pawn.Map, PathEndMode.Touch, null))
+                    if (pawn.Position.DistanceTo(target) < 3 || ReachabilityImmediate.CanReachImmediate(pawn.Position, target, pawn.Map, PathEndMode.Touch, null))
                     {
-                        Utilities.MaybeMoveOutTheWayJob(pawn, target, ref __result);
+                        Utilities.MaybeMoveOutTheWayJob(pawn, ref __result);
                     }
                 }
             }

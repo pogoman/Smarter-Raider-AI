@@ -15,8 +15,7 @@ namespace PogoAI.Patches
                 if (__result != null && __result.def == JobDefOf.AttackMelee && 
                     __result?.targetA.Thing?.Position != null && (pawn.equipment?.PrimaryEq?.PrimaryVerb?.IsMeleeAttack ?? true))
                 {
-                    var target = __result.targetA.Thing.Position;
-                    Utilities.MaybeMoveOutTheWayJob(pawn, target, ref __result);
+                    Utilities.MaybeMoveOutTheWayJob(pawn, ref __result, __result.targetA.Thing);
                 }
             }
         }

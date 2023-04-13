@@ -18,14 +18,16 @@ namespace PogoAI.Patches
             public IAttackTarget attackTarget;
             public Thing blockingThing;
             public IntVec3 cellBefore;
+            public IntVec3 cellAfter;
             public List<int> excludeList = new List<int>();
 
-            public CachedPath(Pawn pawn, IAttackTarget targetThing, Thing blockingThing, IntVec3 cellBefore)
+            public CachedPath(Pawn pawn, IAttackTarget targetThing, Thing blockingThing, IntVec3 cellBefore, IntVec3 cellAfter)
             {
                 this.pawn = pawn;
                 this.attackTarget = targetThing;
                 this.blockingThing = blockingThing;
                 this.cellBefore = cellBefore;
+                this.cellAfter = cellAfter;
             }
         }
 
@@ -43,11 +45,18 @@ namespace PogoAI.Patches
                 if (pawn != null)
                 {
                     var edifice = from.GetEdifice(pawn.Map);
-                    if (edifice != null && edifice.def.passability == Traversability.Impassable && !pawn.CanReserve(edifice))
+                    if (edifice != null && Utilities.CellBlockedFor(pawn, from) && !pawn.CanReserve(edifice))
+                    {
+#if DEBUG
+                        Find.CurrentMap.debugDrawer.FlashCell(from, 0.5f, "NPB", 60); //Green
+#endif
+                        return 10000;
+                    }
+                    else if (edifice != null && !Utilities.IsRoomWall(edifice))
                     {
                         return 10000;
                     }
-                    else if (PawnUtility.AnyPawnBlockingPathAt(from, pawn, true, false, false))
+                    else if (pawn.Map.thingGrid.ThingAt(from, ThingCategory.Pawn)?.Faction == pawn.Faction)
                     {
                         return 10000;
                     }
@@ -89,17 +98,23 @@ namespace PogoAI.Patches
                     return false;
                 }
 
-                var potentials = pawn.Map.attackTargetsCache.GetPotentialTargetsFor(pawn).Where(x => !x.ThreatDisabled(pawn) && x.Thing.Faction == Faction.OfPlayer
+                var potentials = pawn.Map.attackTargetsCache.GetPotentialTargetsFor(pawn).Where(x => !x.ThreatDisabled(pawn) && !x.Thing.Destroyed && x.Thing.Faction == Faction.OfPlayer
                     && pawn.CanReach(x.Thing, PathEndMode.OnCell, Danger.Deadly, false, false, TraverseMode.PassAllDestroyableThings));
 
                 if (pathCostCache.RemoveAll(x => x.attackTarget.ThreatDisabled(pawn) || x.attackTarget.Thing.Destroyed
-                    || (x.blockingThing != null && x.blockingThing.Position.GetRegion(pawn.Map, RegionType.Set_Passable) != null)) > 0)
+                    || (x.blockingThing != null && (!Utilities.CellBlockedFor(pawn, x.blockingThing.Position) || !Utilities.IsRoomWall(x.blockingThing as Building)))
+                    || Utilities.ThingBlocked(x.attackTarget.Thing, IntVec3.Invalid, true)
+                    //|| (x.cellAfter != IntVec3.Invalid && pawn.Position.DistanceTo(x.cellAfter) < 5 
+                    //    && pawn.CanReach(x.cellAfter, PathEndMode.Touch, Danger.Deadly, false, false, TraverseMode.ByPawn))                    
+                    ) > 0)
                 {
+#if DEBUG
+                    Log.Message($"{pawn} Cache trimmed {pathCostCache.Count}");
+#endif
                     findNewPaths = true;
                 }
 
-                var memoryValue = pathCostCache.OrderBy(x => pawn.Position.DistanceTo(x.cellBefore))
-                    .FirstOrDefault(x => (x.blockingThing == null && !Utilities.PawnBlocked(x.attackTarget.Thing, IntVec3.Invalid)) || pawn.CanReserve(x.blockingThing));                
+                var memoryValue = pathCostCache.OrderBy(x => pawn.Position.DistanceTo(x.cellBefore)).FirstOrDefault(x => x.blockingThing == null || pawn.CanReserve(x.blockingThing));                
                 IAttackTarget attackTarget = null;
 
                 if (memoryValue != null)
@@ -114,9 +129,9 @@ namespace PogoAI.Patches
                     {
                         memoryValue = null;
                         attackTarget = potentials.OrderBy(x => pawn.Map.avoidGrid.grid[x.Thing.Position]).ThenBy(x => x.Thing.Position.DistanceTo(pawn.Position))
-                            .FirstOrDefault(x => !Utilities.PawnBlocked(x.Thing, IntVec3.Invalid));
+                            .FirstOrDefault(x => !Utilities.ThingBlocked(x.Thing, IntVec3.Invalid, true));
 #if DEBUG
-                        Log.Message($"new target: {attackTarget}");
+                        Log.Message($"{pawn} New target: {attackTarget}");
 #endif
                         if (attackTarget == null)
                         {
@@ -124,37 +139,50 @@ namespace PogoAI.Patches
                         }
                         intVec = attackTarget.Thing.Position;
 #if DEBUG
-                        Find.CurrentMap.debugDrawer.FlashCell(pawn.Position, 0.7f, attackTarget.Thing.def.defName, 300);
+                        Find.CurrentMap.debugDrawer.FlashCell(attackTarget.Thing.Position, 0.8f, $"{attackTarget.Thing}", 60);
 #endif
                     }
-
-                    if (memoryValue == null)
+                    
+                    if (memoryValue == null || (pawn.Position.DistanceTo(memoryValue.cellBefore) > 3 && !pawn.pather.MovedRecently(120)))
                     {
                         customTuning.custom = new CustomTuning(pawn);
                         using (PawnPath pawnPath = pawn.Map.pathFinder.FindPath(pawn.Position, intVec,
                             TraverseParms.For(pawn, Danger.Deadly, TraverseMode.PassAllDestroyableThings, false, true, false), PathEndMode.OnCell, customTuning))
                         {
                             IntVec3 cellBeforeBlocker = IntVec3.Invalid;
+                            IntVec3 cellAfterBlocker = IntVec3.Invalid;
                             Thing blockingThing = pawnPath.FirstBlockingBuilding(out cellBeforeBlocker, pawn);
                             if (blockingThing == null && pawnPath.nodes.Count > 1)
                             {
                                 cellBeforeBlocker = pawnPath.nodes[1];
+#if DEBUG
+                                Log.Message($"{pawn} targ: {attackTarget} no blocker {cellBeforeBlocker}");
+#endif
                             }
                             else
                             {
+                                cellAfterBlocker = blockingThing.Position - cellBeforeBlocker + blockingThing.Position;
 #if DEBUG
                                 Find.CurrentMap.debugDrawer.FlashCell(blockingThing.Position, 1f, "blocker", 300);
+                                Log.Message($"{pawn} targ: {attackTarget} blocked {blockingThing} cb: {cellBeforeBlocker} ca: {cellAfterBlocker} " +
+                                    $"reg: {Utilities.CellBlockedFor(pawn, blockingThing.Position)}");
 #endif
                             }
                             memoryValue = pathCostCache.FirstOrDefault(x => x.cellBefore == cellBeforeBlocker);
                             if (memoryValue == null)
                             {
-                                memoryValue = new CachedPath(pawn, attackTarget, blockingThing, cellBeforeBlocker);
+                                memoryValue = new CachedPath(pawn, attackTarget, blockingThing, cellBeforeBlocker, cellAfterBlocker);
                                 pathCostCache.Add(memoryValue);
+#if DEBUG
+                                Log.Message($"{pawn} targ: {attackTarget} added to cache");
+#endif
                             }
                             else
                             {
                                 findNewPaths = false;
+#if DEBUG
+                                Log.Message($"{pawn} targ: {attackTarget} already cached disable findNew");
+#endif
                             }
                         }
                     }
@@ -163,11 +191,10 @@ namespace PogoAI.Patches
                 {
                     memoryValue = pathCostCache.First();
                 }
-
-#if DEBUG
-                Find.CurrentMap.debugDrawer.FlashCell(pawn.Position, 0.8f, $"{memoryValue.attackTarget}", 60);
-#endif
                 __result = GetSapJob(pawn, memoryValue);
+#if DEBUG
+                Find.CurrentMap.debugDrawer.FlashCell(pawn.Position, 0.8f, $"{__result.targetA.Thing}", 60); //blue
+#endif
                 return false;
             }            
 
@@ -180,25 +207,28 @@ namespace PogoAI.Patches
                     blockingThing = memoryValue.attackTarget.Thing;
                 }
                 var distanceToTarget = pawn.Position.DistanceTo(cellBeforeBlocker);
-                Job job = null;               
-                
-                if (memoryValue.blockingThing != null && memoryValue.blockingThing.def.mineable && !StatDefOf.MiningSpeed.Worker.IsDisabledFor(pawn))
+                Job job = null;
+                if (memoryValue.blockingThing == null || pawn.CanReserve(blockingThing))
                 {
-                    if (pawn.CanReserve(blockingThing))
+                    if (memoryValue.blockingThing != null && memoryValue.blockingThing.def.mineable && !StatDefOf.MiningSpeed.Worker.IsDisabledFor(pawn))
                     {
                         job = JobMaker.MakeJob(JobDefOf.Mine, blockingThing);
                     }
-                }
-                else
-                {
-                    job = JobMaker.MakeJob(JobDefOf.AttackMelee, blockingThing);
+                    else
+                    {
+                        job = JobMaker.MakeJob(JobDefOf.AttackMelee, blockingThing);
+                    }
+                    if (memoryValue.blockingThing != null && !pawn.HasReserved(blockingThing))
+                    {
+                        pawn.Reserve(blockingThing, job);
+                    }
                 }
                 if (job == null || job.def == JobDefOf.AttackMelee)
                 {
-                    if (distanceToTarget < 3 && Utilities.PawnBlocked(pawn, IntVec3.Invalid))
-                    {
-                        job = Utilities.GetTrashNearbyWallJob(pawn, 1);
-                    }
+                    //if (!pawn.pather.MovedRecently(60) && Utilities.ThingBlocked(pawn, IntVec3.Invalid))
+                    //{
+                    //    job = Utilities.GetTrashNearbyWallJob(pawn, 1);
+                    //}
                     if (job == null)
                     {
                         job = DigUtility.WaitNearJob(pawn, cellBeforeBlocker);
