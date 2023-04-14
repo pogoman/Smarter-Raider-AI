@@ -17,16 +17,10 @@ namespace PogoAI.Patches
 
         public static void GridOnDeath(Pawn_HealthTracker __instance)
         {
-            if (__instance.pawn.Position.IsValid && __instance.pawn.Faction.HostileTo(Faction.OfPlayer) && __instance.pawn.Faction != Faction.OfInsects)
+            if (__instance.pawn != null && __instance.pawn.Position.IsValid && __instance.pawn.Faction.HostileTo(Faction.OfPlayer) && __instance.pawn.Faction != Faction.OfInsects)
             {
-                AvoidGrid_Regenerate.PrintAvoidGridAroundPos(__instance.pawn.Map.avoidGrid, __instance.pawn.Map, __instance.pawn.Position, 2, 1000);
+                AvoidGrid_Regenerate.PrintAvoidGridAroundPos(__instance.pawn.Map.avoidGrid, __instance.pawn.Map, __instance.pawn.Position, 1, 1000);
                 JobGiver_AISapper.pathCostCache.RemoveAll(x => x.blockingThing == null && x.cellBefore.DistanceTo(__instance.pawn.Position) < 5);
-                //var nearbyRaiders = __instance.pawn.Map.mapPawns.PawnsInFaction(__instance.pawn.Faction).Where(x => x.Position.DistanceTo(__instance.pawn.Position) < 5);
-                //foreach (var raider in nearbyRaiders)
-                //{
-                //    raider.jobs.StopAll();
-                //    raider.jobs.StartJob(JobMaker.MakeJob(JobDefOf.Wait, 20, true), JobCondition.InterruptForced, null, false, true, null, null, false, false, null, false, true);
-                //}
             }
         }
     }

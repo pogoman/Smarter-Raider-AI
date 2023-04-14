@@ -14,14 +14,16 @@ namespace PogoAI
     {
         public const string DEFAULT_BREACH_WEAPONS = "stickbomb, concussion, doom, triple, inferno, chargeblast, thermal, thump, cannon";
 
-        public string BreachWeapons = DEFAULT_BREACH_WEAPONS;
-        public bool CombatExtendedCompatPerf = true;
+        public int maxSappers = 20;
+        public string breachWeapons = DEFAULT_BREACH_WEAPONS;
+        public bool combatExtendedCompatPerf = true;
 
         public override void ExposeData()
         {
             base.ExposeData();
-            Scribe_Values.Look(ref BreachWeapons, "breachWeapons", DEFAULT_BREACH_WEAPONS, true);
-            Scribe_Values.Look(ref CombatExtendedCompatPerf, "combatExtendedCompatPerf", true, true);
+            Scribe_Values.Look(ref breachWeapons, "breachWeapons", DEFAULT_BREACH_WEAPONS, true);
+            Scribe_Values.Look(ref combatExtendedCompatPerf, "combatExtendedCompatPerf", true, true);
+            Scribe_Values.Look(ref maxSappers, "maxSappers", 20, true);
         }
     }
 
@@ -45,11 +47,12 @@ namespace PogoAI
             base.DoSettingsWindowContents(inRect);
             Listing_Standard listingStandard = new Listing_Standard();
             listingStandard.Begin(inRect);    
-            listingStandard.AddLabeledTextField("Allowed Breach Weapons:\n(comma separated, case insensitive, partial match, no spaces)", ref settings.BreachWeapons, 0.25f, 80);
+            listingStandard.AddLabeledTextField("Allowed Breach Weapons:\n(comma separated, case insensitive, partial match, no spaces)", ref settings.breachWeapons, 0.25f, 80);
+            listingStandard.SliderLabeled("Maximum number of sappers per raid:\n(Higher numbers will affect performance)\n", ref settings.maxSappers, "{0}/50", 1, 50);
             if (combatExtended)
             {
-                listingStandard.CheckboxLabeled("Enable Combat Extended Compatibility Performance fix (recommeded to leave on)\nRequires game restart.",
-                    ref settings.CombatExtendedCompatPerf);
+                listingStandard.CheckboxLabeled("Enable Combat Extended Compatibility Performance fix: \n(recommeded to leave on. Requires game restart.)",
+                    ref settings.combatExtendedCompatPerf);
             }
             listingStandard.End();
             settings.Write();

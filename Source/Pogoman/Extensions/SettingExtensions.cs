@@ -1,4 +1,5 @@
-﻿using System;
+﻿using RimWorld;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -43,6 +44,22 @@ namespace PogoAI.Extensions
 
             string buffer = settingsValue.ToString();
             settingsValue = Widgets.TextField(rightHalf, buffer);
+        }
+
+        public static void SliderLabeled(this Listing_Standard ls, string label, ref int val, string format, int min = 0, int max = 1)
+        {
+            TextAnchor anchor = Text.Anchor;
+            Text.Anchor = TextAnchor.MiddleLeft;
+            ls.Gap(Gap);
+            ls.LineRectSpilter(out Rect leftHalf, out Rect rightHalf, 0.3f, 60);
+            Widgets.Label(rect: leftHalf, label: label);
+
+            float result = Widgets.HorizontalSlider(rect: rightHalf.RightPart(pct: .90f).Rounded(), value: val, leftValue: min, rightValue: max, middleAlignment: true);
+            val = (int)result;
+            Text.Anchor = TextAnchor.UpperRight;
+            Widgets.Label(rect: rightHalf.RightPart(pct: .10f).Rounded(), label: String.Format(format: format, arg0: val));
+            Text.Anchor = anchor;
+            ls.Gap(gapHeight: ls.verticalSpacing);
         }
     }
 }

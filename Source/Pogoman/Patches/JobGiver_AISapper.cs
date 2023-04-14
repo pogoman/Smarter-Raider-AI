@@ -19,16 +19,16 @@ namespace PogoAI.Patches
             public IAttackTarget attackTarget;
             public Thing blockingThing;
             public IntVec3 cellBefore;
-            public float pathCost;
+            public IntVec3 cellAfter;
             public List<int> excludeList = new List<int>();
 
-            public CachedPath(Pawn pawn, IAttackTarget targetThing, Thing blockingThing, IntVec3 cellBefore, float pathCost)
+            public CachedPath(Pawn pawn, IAttackTarget targetThing, Thing blockingThing, IntVec3 cellBefore, IntVec3 cellAfter)
             {
                 this.pawn = pawn;
                 this.attackTarget = targetThing;
                 this.blockingThing = blockingThing;
                 this.cellBefore = cellBefore;
-                this.pathCost = pathCost;
+                this.cellAfter = cellAfter;
             }
         }
 
@@ -53,32 +53,13 @@ namespace PogoAI.Patches
 #endif
                         return 10000;
                     }
-                    //else if (edifice != null && !Utilities.IsRoomWall(edifice))
-                    //{
-                    //    return 10000;
-                    //}
-//                    else if (pawn.Map.thingGrid.ThingAt(from, ThingCategory.Pawn)?.Faction == pawn.Faction)
-//                    {
-//                        return 5000;
-//#if DEBUG
-//                        Find.CurrentMap.debugDrawer.FlashCell(from, 0.5f, "NPP", 60); //Green
-//#endif
-//                    }
                 }
                 return 0;
             }
 
         }
 
-        public static PathFinderCostTuning customTuning = new PathFinderCostTuning()
-        {
-            //costOffLordWalkGrid = 0,
-            //costBlockedWallBase = 0,
-            //costBlockedWallExtraPerHitPoint = 40,
-            //costBlockedDoor = 0,
-            //costBlockedDoorPerHitPoint = 40,
-            //costBlockedWallExtraForNaturalWalls = 0
-        };
+        public static PathFinderCostTuning customTuning = new PathFinderCostTuning() {};
 
         public static List<CachedPath> pathCostCache = new List<CachedPath>();
 
@@ -103,13 +84,7 @@ namespace PogoAI.Patches
                 }
 
                 if (pathCostCache.RemoveAll(x => x.attackTarget.ThreatDisabled(pawn) || x.attackTarget.Thing.Destroyed 
-                    || (x.blockingThing != null && (!Utilities.CellBlockedFor(pawn, x.blockingThing.Position) 
-                    /*|| Utilities.RoomIsBreached(pawn, x.attackTarget.Thing.Position)*/))
-                    //&& Utilities.GetPawnsInRadius(pawn.Map, x.attackTarget.Thing.Position, 1, IntVec3.Invalid, true).Count(x => x.Faction == pawn.Faction) == 0
-                    //|| Utilities.ThingBlocked(x.attackTarget.Thing, IntVec3.Invalid, true)
-                    //|| (x.cellAfter != IntVec3.Invalid && pawn.Position.DistanceTo(x.cellAfter) < 5 
-                    //    && pawn.CanReach(x.cellAfter, PathEndMode.Touch, Danger.Deadly, false, false, TraverseMode.ByPawn))                    
-                    ) > 0)
+                    || (x.blockingThing != null && !Utilities.CellBlockedFor(pawn, x.blockingThing.Position))) > 0)
                 {
 #if DEBUG
                     Log.Message($"{pawn} Cache trimmed, amt left: {pathCostCache.Count}");
@@ -131,8 +106,8 @@ namespace PogoAI.Patches
   
                 if (memoryValue == null)
                 {
-                    attackTarget = pawn.Map.attackTargetsCache.GetPotentialTargetsFor(pawn).Where(x => !x.ThreatDisabled(pawn) && !x.Thing.Destroyed && x.Thing.Faction == Faction.OfPlayer)
-                        .OrderBy(x => x.Thing.Position.DistanceTo(pawn.Position)).FirstOrDefault();
+                    attackTarget = pawn.Map.attackTargetsCache.GetPotentialTargetsFor(pawn)
+                        .Where(x => !x.ThreatDisabled(pawn) && !x.Thing.Destroyed && x.Thing.Faction == Faction.OfPlayer).RandomElement();
 
                     if (attackTarget == null)
                     {
@@ -144,7 +119,7 @@ namespace PogoAI.Patches
 #endif
                 }
                     
-                if (memoryValue == null && findNewPaths)
+                if (memoryValue == null && findNewPaths && pathCostCache.Count <= Init.settings.maxSappers)
                 {
                     customTuning.custom = new CustomTuning(pawn);
                     using (PawnPath pawnPath = pawn.Map.pathFinder.FindPath(pawn.Position, intVec,
@@ -172,7 +147,7 @@ namespace PogoAI.Patches
                         memoryValue = pathCostCache.FirstOrDefault(x => x.cellBefore == cellBeforeBlocker);
                         if (memoryValue == null)
                         {
-                            memoryValue = new CachedPath(pawn, attackTarget, blockingThing, cellBeforeBlocker, pawnPath.TotalCost);
+                            memoryValue = new CachedPath(pawn, attackTarget, blockingThing, cellBeforeBlocker, cellAfterBlocker);
                             pathCostCache.Add(memoryValue);
 #if DEBUG
                             Log.Message($"{pawn} targ: {attackTarget} added to cache. INDEX: {pathCostCache.Count - 1}");
@@ -190,12 +165,20 @@ namespace PogoAI.Patches
                 }
                 else if (memoryValue == null)
                 {
-                    var randomPawn = pawn.GetLord().ownedPawns.Where(x => x.CurJobDef == JobDefOf.Mine || x.CurJobDef == JobDefOf.AttackMelee).RandomElement();
-                    if (randomPawn == null || pawn.Position.DistanceTo(randomPawn.Position) < 20)
+                    var findTarget = pathCostCache.FirstOrDefault(x => x.attackTarget == attackTarget && x.blockingThing == null);
+                    if (findTarget != null)
                     {
-                        return false;
+                        memoryValue = findTarget;
                     }
-                    __result = JobMaker.MakeJob(JobDefOf.Follow, randomPawn);
+                    else
+                    {
+                        var randomPawn = pawn.GetLord().ownedPawns.Where(x => x.CurJobDef == JobDefOf.Mine || x.CurJobDef == JobDefOf.AttackMelee).RandomElement();
+                        if (randomPawn == null || pawn.Position.DistanceTo(randomPawn.Position) < 20)
+                        {
+                            return false;
+                        }
+                        __result = JobMaker.MakeJob(JobDefOf.Follow, randomPawn);
+                    }
                 }
 
                 if (memoryValue != null)
@@ -206,7 +189,6 @@ namespace PogoAI.Patches
                     {
                         Find.CurrentMap.debugDrawer.FlashCell(pawn.Position, 0.8f, $"{cacheIndex}" +
                             $"\n{__result.def.defName.Substring(0, 3)}\n{__result.targetA.Cell.x},{__result.targetA.Cell.z}", 60); //blue
-                        //Find.CurrentMap.debugDrawer.FlashCell(pawn.Position + pawn.Rotation.Opposite.FacingCell, 0.1f, $"{memoryValue.pathCost}", 60); 
                     }
 #endif
                 }
@@ -214,7 +196,7 @@ namespace PogoAI.Patches
                 if (__result != null)
                 {
                     __result.collideWithPawns = true;
-                    __result.expiryInterval = Rand.RangeInclusive(180, 360);
+                    __result.expiryInterval = Rand.RangeInclusive(120, 240);
                     __result.ignoreDesignations = true;
                     __result.checkOverrideOnExpire = true;
                     __result.expireRequiresEnemiesNearby = false;
@@ -234,24 +216,13 @@ namespace PogoAI.Patches
                 var distanceToTarget = pawn.Position.DistanceTo(cellBeforeBlocker);
                 Job job = null;
 
-                if (memoryValue.blockingThing == null/* || (!pawn.HasReserved(blockingThing) && !pawn.CanReserve(blockingThing))*/)
+                if (memoryValue.blockingThing == null)
                 {
                     IntVec3 intVec = CellFinder.RandomClosewalkCellNear(blockingThing.Position, pawn.Map, 5, null);
-                    //if (intVec == pawn.Position)
-                    //{
-                    //    job = JobMaker.MakeJob(JobDefOf.Wait, 20, true);
-                    //}
                     job = JobMaker.MakeJob(JobDefOf.AttackMelee, blockingThing);
                 }
                 else
-                {
-                    //if (memoryValue.blockingThing != null && distanceToTarget < 15)
-                    //{
-                    //using (PawnPath pawnPath = pawn.Map.pathFinder.FindPath(pawn.Position, cellBeforeBlocker,
-                    //        TraverseParms.For(pawn, Danger.Deadly, TraverseMode.ByPawn, false, false, false), PathEndMode.Touch))
-                    //{
-                    //    if (pawnPath != PawnPath.NotFound && !pawnPath.nodes.Any(x => PawnUtility.AnyPawnBlockingPathAt(x, pawn, true, true, false)))
-                    //    {
+                {                   
                     if (memoryValue.blockingThing != null)
                     {
                         if (memoryValue.blockingThing.def.mineable && !StatDefOf.MiningSpeed.Worker.IsDisabledFor(pawn))
@@ -264,31 +235,10 @@ namespace PogoAI.Patches
                         }
                         if (!pawn.HasReserved(blockingThing))
                         {
-                            Log.Message($"{pawn} reserving {blockingThing} with {job}");
                             pawn.ClearAllReservations();
                             pawn.Reserve(blockingThing, job);
                         }
-                    }
-                    
-                    // }
-                    //}
-                    //}
-                    //if (job == null || job.def == JobDefOf.AttackMelee)
-                    //{
-                    //    //if (!pawn.pather.MovedRecently(60) && Utilities.ThingBlocked(pawn, IntVec3.Invalid))
-                    //    //{
-                    //    //    job = Utilities.GetTrashNearbyWallJob(pawn, 1);
-                    //    //}
-                    //    if (job == null)
-                    //    {
-                    //        IntVec3 intVec = CellFinder.RandomClosewalkCellNear(cellBeforeBlocker, pawn.Map, 5, null);
-                    //        if (intVec == pawn.Position)
-                    //        {
-                    //            job = JobMaker.MakeJob(JobDefOf.Wait, 20, true);
-                    //        }
-                    //        job = JobMaker.MakeJob(JobDefOf.Goto, intVec, 500, true);
-                    //    }
-                    //}
+                    } 
                 }               
 
                 return job;

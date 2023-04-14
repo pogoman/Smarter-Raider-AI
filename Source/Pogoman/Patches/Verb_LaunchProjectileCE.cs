@@ -23,7 +23,7 @@ namespace PogoAI.Patches
             {
                 CE = LoadedModManager.RunningMods.FirstOrDefault(m => m.Name == "Combat Extended");
 
-                if (CE == null || !Init.settings.CombatExtendedCompatPerf)
+                if (CE == null || !Init.settings.combatExtendedCompatPerf)
                 {
                     return false;
                 }

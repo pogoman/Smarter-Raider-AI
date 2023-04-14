@@ -143,7 +143,7 @@ namespace PogoAI.Patches
 
                 var weapon = compEquippable.ToString();
 
-                var breachWeapons = Init.settings.BreachWeapons.Replace(" ", string.Empty).Split(',');
+                var breachWeapons = Init.settings.breachWeapons.Replace(" ", string.Empty).Split(',');
                 if (breachWeapons.Any(x => weapon.Matches(x)))
                 {
                     if (Init.combatExtended)
