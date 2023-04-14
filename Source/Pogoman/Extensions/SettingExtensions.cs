@@ -51,7 +51,7 @@ namespace PogoAI.Extensions
             TextAnchor anchor = Text.Anchor;
             Text.Anchor = TextAnchor.MiddleLeft;
             ls.Gap(Gap);
-            ls.LineRectSpilter(out Rect leftHalf, out Rect rightHalf, 0.3f, 60);
+            ls.LineRectSpilter(out Rect leftHalf, out Rect rightHalf, 0.3f, 70);
             Widgets.Label(rect: leftHalf, label: label);
 
             float result = Widgets.HorizontalSlider(rect: rightHalf.RightPart(pct: .90f).Rounded(), value: val, leftValue: min, rightValue: max, middleAlignment: true);
