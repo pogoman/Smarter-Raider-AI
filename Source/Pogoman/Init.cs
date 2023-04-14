@@ -48,7 +48,7 @@ namespace PogoAI
             Listing_Standard listingStandard = new Listing_Standard();
             listingStandard.Begin(inRect);    
             listingStandard.AddLabeledTextField("Allowed Breach Weapons:\n(comma separated, case insensitive, partial match, no spaces)", ref settings.breachWeapons, 0.25f, 80);
-            listingStandard.SliderLabeled("Maximum number of sappers per raid:\n(Higher numbers will affect performance)\n", ref settings.maxSappers, "{0}/50", 1, 50);
+            listingStandard.SliderLabeled("Maximum number of sappers per raid:\n(Higher numbers may affect performance)\n", ref settings.maxSappers, "{0}/50", 1, 50);
             if (combatExtended)
             {
                 listingStandard.CheckboxLabeled("Enable Combat Extended Compatibility Performance fix: \n(recommeded to leave on. Requires game restart.)",

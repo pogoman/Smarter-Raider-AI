@@ -20,6 +20,10 @@ namespace PogoAI.Patches
             if (__instance.pawn != null && __instance.pawn.Position.IsValid && __instance.pawn.Faction.HostileTo(Faction.OfPlayer) && __instance.pawn.Faction != Faction.OfInsects)
             {
                 AvoidGrid_Regenerate.PrintAvoidGridAroundPos(__instance.pawn.Map.avoidGrid, __instance.pawn.Map, __instance.pawn.Position, 1, 1000);
+                if (__instance.pawn.mindState.enemyTarget != null)
+                {
+                    AvoidGrid_Regenerate.PrintAvoidGridAroundPos(__instance.pawn.Map.avoidGrid, __instance.pawn.Map, __instance.pawn.mindState.enemyTarget.Position, 1, 1000);
+                }
                 JobGiver_AISapper.pathCostCache.RemoveAll(x => x.blockingThing == null && x.cellBefore.DistanceTo(__instance.pawn.Position) < 5);
             }
         }
