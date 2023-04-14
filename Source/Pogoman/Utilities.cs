@@ -4,6 +4,7 @@ using System.Linq;
 using Verse.AI;
 using Verse;
 using PogoAI.Extensions;
+using PogoAI.Patches;
 
 namespace PogoAI
 {
@@ -13,8 +14,7 @@ namespace PogoAI
         {
             var room = roomCell.GetRoom(Find.CurrentMap);
             return (room != null && room.PsychologicallyOutdoors) || (room == null && pawn.CanReach(roomCell, PathEndMode.Touch, Danger.Deadly));
-        }
-
+        }        
 
         public static bool CellBlockedFor(Thing thing, IntVec3 cell)
         {
@@ -112,7 +112,15 @@ namespace PogoAI
             if (GetPawnsInRadius(pawn.Map, pawn.Position, 1, IntVec3.Invalid).Where(x => x.Faction == pawn.Faction)
                 .Any(x => ThingBlocked((Pawn)x, x.Position + x.Rotation.Opposite.FacingCell)))
             {
-                IntVec3 intVec = GetNearestEmptyCell(pawn, 1, target?.Position ?? pawn.Position);
+                IntVec3 intVec = IntVec3.Invalid;
+                if (target != null && (pawn.equipment?.PrimaryEq?.PrimaryVerb?.IsMeleeAttack ?? true))
+                {
+                    intVec = GetNearestEmptyCell(pawn, 1, target.Position);
+                }
+                else
+                {
+                    intVec = GetNearestEmptyCell(pawn, 1, pawn.Position);
+                }
                 if (intVec.IsValid)
                 {
 #if DEBUG

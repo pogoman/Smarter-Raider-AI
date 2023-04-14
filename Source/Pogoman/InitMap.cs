@@ -1,5 +1,5 @@
-﻿using Verse;
-using static PogoAI.Patches.AvoidGrid;
+﻿using PogoAI.Patches;
+using Verse;
 
 namespace PogoAI
 {
@@ -7,8 +7,8 @@ namespace PogoAI
     {
         public InitMap(Verse.Map map) : base(map)
         {
-            Patches.JobGiver_AISapper.pathCostCache.Clear();
-            Patches.JobGiver_AISapper.findNewPaths = true;
+            JobGiver_AISapper.pathCostCache.Clear();
+            JobGiver_AISapper.findNewPaths = true;
             AvoidGrid_Regenerate.lastUpdateTicks = 0;
         }
     }
