@@ -17,7 +17,7 @@ namespace PogoAI.Patches
         {
             static bool Prefix(Pawn pawn, ref Job __result)
             {
-                return pawn.Faction == Faction.OfInsects;
+                return pawn.Faction == Faction.OfInsects || !pawn.Map.IsPlayerHome;
             }
         }
     }
