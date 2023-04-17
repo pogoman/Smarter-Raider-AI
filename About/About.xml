@@ -8,11 +8,13 @@
 	<packageId>pogo.ai</packageId>
 	<modDependenciesByVersion>
 	</modDependenciesByVersion>
+	<loadBefore>
+		<li>Krkr.rule56</li>
+	</loadBefore>
 	<loadAfter>
 		<li>Ludeon.RimWorld</li>
 		<li>Ludeon.RimWorld.Royalty</li>
 		<li>brrainz.harmony</li>
-		<li>Krkr.rule56</li>
 		<li>CETeam.CombatExtended</li>
 	</loadAfter>
 	<incompatibleWith>
