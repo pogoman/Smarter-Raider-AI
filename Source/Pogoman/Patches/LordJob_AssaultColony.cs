@@ -12,8 +12,11 @@ namespace PogoAI.Patches
         {
             static void Postfix(ref RimWorld.LordJob_AssaultColony __instance)
             {
-                __instance.breachers = !Init.CAI;
-                __instance.useAvoidGridSmart = true;
+                __instance.breachers = true;
+                if (!Init.combatAi)
+                {
+                    __instance.useAvoidGridSmart = true;
+                }
                 BreachingUtility.breachMineables = false;
                 JobGiver_AISapper.pathCostCache.Clear();
                 JobGiver_AISapper.findNewPaths = true;

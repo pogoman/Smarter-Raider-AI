@@ -31,7 +31,7 @@ namespace PogoAI
     {
         public static PogoSettings settings;
         public static bool combatExtended = false;
-        public static bool CAI = false;
+        public static bool combatAi = false;
         public static Harmony harm;
 
         public Init(ModContentPack contentPack) : base(contentPack)
@@ -43,8 +43,8 @@ namespace PogoAI
             {
                 Log.Message("SRAI: CE detected");
             }
-            CAI = LoadedModManager.RunningMods.FirstOrDefault(m => m.PackageId.Matches("Krkr.rule56")) != null;
-            if (CAI)
+            combatAi = LoadedModManager.RunningMods.FirstOrDefault(m => m.PackageId.Matches("Krkr.rule56")) != null;
+            if (combatAi)
             {
                 Log.Message("SRAI: CAI detected");
             }
