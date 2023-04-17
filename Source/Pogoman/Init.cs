@@ -31,23 +31,13 @@ namespace PogoAI
     {
         public static PogoSettings settings;
         public static bool combatExtended = false;
-        public static bool CAI = false;
         public static Harmony harm;
 
         public Init(ModContentPack contentPack) : base(contentPack)
         {
-            Log.Message("Smarter Raider AI Initialising...");
+			Log.Message("POGO INITIALISE");
             harm  = new Harmony("pogo.ai");
-            combatExtended = LoadedModManager.RunningMods.FirstOrDefault(m => m.PackageId.Matches("CETeam.CombatExtended")) != null;
-            if (combatExtended)
-            {
-                Log.Message("SRAI: CE detected");
-            }
-            CAI = LoadedModManager.RunningMods.FirstOrDefault(m => m.PackageId.Matches("Krkr.rule56")) != null;
-            if (CAI)
-            {
-                Log.Message("SRAI: CAI detected");
-            }
+            combatExtended = LoadedModManager.RunningMods.FirstOrDefault(m => m.Name == "Combat Extended") != null;
             settings = GetSettings<PogoSettings>();
             harm.PatchAll();
         }
