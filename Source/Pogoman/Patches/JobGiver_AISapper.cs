@@ -87,7 +87,7 @@ namespace PogoAI.Patches
                     || (x.blockingThing != null && !Utilities.CellBlockedFor(pawn, x.blockingThing.Position))) > 0)
                 {
 #if DEBUG
-                    Log.Message($"{pawn} Cache trimmed, amt left: {pathCostCache.Count}");
+                    Log.Message($"{pawn} Cache trimmed: {string.Join(",", pathCostCache.Select(x => x.attackTarget.Thing))}");
 #endif
                     findNewPaths = true;
                 }
@@ -139,7 +139,7 @@ namespace PogoAI.Patches
                         {
                             cellAfterBlocker = blockingThing.Position - cellBeforeBlocker + blockingThing.Position;
 #if DEBUG
-                            Find.CurrentMap.debugDrawer.FlashCell(blockingThing.Position, 1f, $"b{pawnPath.TotalCost}", 60);
+                            Find.CurrentMap.debugDrawer.FlashCell(blockingThing.Position, 1f, $"b{pawnPath.TotalCost}", 300);
                             Log.Message($"{pawn} targ: {attackTarget} blocked {blockingThing} cb: {cellBeforeBlocker} ca: {cellAfterBlocker} " +
                                 $"reg: {Utilities.CellBlockedFor(pawn, blockingThing.Position)} Cost: {pawnPath.TotalCost} Length: {pawnPath.nodes.Count}");
 #endif
@@ -172,7 +172,7 @@ namespace PogoAI.Patches
                     }
                     else
                     {
-                        var randomPawn = pawn.GetLord().ownedPawns.Where(x => x.CurJobDef == JobDefOf.Mine || x.CurJobDef == JobDefOf.AttackMelee).RandomElement();
+                        var randomPawn = pawn.Map.mapPawns.SpawnedPawnsInFaction(pawn.Faction).Where(x => x.CurJobDef == JobDefOf.Mine || x.CurJobDef == JobDefOf.AttackMelee).RandomElement();
                         if (randomPawn == null || pawn.Position.DistanceTo(randomPawn.Position) < 20)
                         {
                             return false;
