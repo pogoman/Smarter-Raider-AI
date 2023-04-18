@@ -172,12 +172,13 @@ namespace PogoAI.Patches
                     }
                     else
                     {
-                        var randomPawn = pawn.Map.mapPawns.SpawnedPawnsInFaction(pawn.Faction).Where(x => x.CurJobDef == JobDefOf.Mine || x.CurJobDef == JobDefOf.AttackMelee).RandomElement();
-                        if (randomPawn == null || pawn.Position.DistanceTo(randomPawn.Position) < 20)
+                        var sappingPawn = pawn.Map.mapPawns.SpawnedPawnsInFaction(pawn.Faction).Where(x => x.CurJobDef == JobDefOf.Mine || x.CurJobDef == JobDefOf.AttackMelee)
+                            .OrderBy(x => x.Position.DistanceTo(pawn.Position)).FirstOrDefault();
+                        if (sappingPawn == null || pawn.Position.DistanceTo(sappingPawn.Position) < 20)
                         {
                             return false;
                         }
-                        __result = JobMaker.MakeJob(JobDefOf.Follow, randomPawn);
+                        __result = JobMaker.MakeJob(JobDefOf.Follow, sappingPawn);
                     }
                 }
 
