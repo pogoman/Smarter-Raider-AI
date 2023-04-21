@@ -134,6 +134,10 @@ namespace PogoAI.Patches
         {
             static bool Prefix(Pawn pawn, ref Verb __result)
             {
+                if (pawn.CurJobDef?.defName == "TendSelf")
+                {
+                    return false;
+                }
                 Pawn_EquipmentTracker equipment = pawn.equipment;
                 CompEquippable compEquippable = (equipment != null) ? equipment.PrimaryEq : null;
                 if (compEquippable == null)
