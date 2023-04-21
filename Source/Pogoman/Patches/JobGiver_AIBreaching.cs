@@ -20,6 +20,9 @@ namespace PogoAI.Patches
             {
                 lordToil.Data.Reset();
                 lordToil.useAvoidGrid = false;
+#if DEBUG
+                Log.Message($"Couldnt find breach job so disabling avoid grid for breaching");
+#endif
             }
         }
     }

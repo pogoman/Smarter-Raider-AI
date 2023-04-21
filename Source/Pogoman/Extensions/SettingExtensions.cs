@@ -60,6 +60,7 @@ namespace PogoAI.Extensions
             Widgets.Label(rect: rightHalf.RightPart(pct: .10f).Rounded(), label: String.Format(format: format, arg0: val));
             Text.Anchor = anchor;
             ls.Gap(gapHeight: ls.verticalSpacing);
+            ls.Gap(Gap);
         }
     }
 }
