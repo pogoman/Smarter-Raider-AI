@@ -1,11 +1,7 @@
 ﻿using HarmonyLib;
 using PogoAI.Extensions;
-using RimWorld;
-using System;
 using System.Linq;
-using UnityEngine;
 using Verse;
-using Verse.AI;
 
 namespace PogoAI.Patches
 {
@@ -16,7 +12,7 @@ namespace PogoAI.Patches
         {
             static void Postfix(RimWorld.LordToil_AssaultColonyBreaching __instance)
             {
-                __instance.Data.maxRange = 40f;
+                __instance.Data.maxRange = 75f;
             }
 
             static bool Prefix(RimWorld.LordToil_AssaultColonyBreaching __instance)

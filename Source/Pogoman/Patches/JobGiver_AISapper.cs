@@ -174,7 +174,7 @@ namespace PogoAI.Patches
                     {
                         var sappingPawn = pawn.Map.mapPawns.SpawnedPawnsInFaction(pawn.Faction).Where(x => x.CurJobDef == JobDefOf.Mine || x.CurJobDef == JobDefOf.AttackMelee)
                             .OrderBy(x => x.Position.DistanceTo(pawn.Position)).FirstOrDefault();
-                        if (sappingPawn == null || pawn.Position.DistanceTo(sappingPawn.Position) < 20)
+                        if (sappingPawn == null || pawn.Position.DistanceTo(sappingPawn.Position) < 10)
                         {
                             return false;
                         }

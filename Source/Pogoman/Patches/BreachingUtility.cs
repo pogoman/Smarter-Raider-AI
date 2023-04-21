@@ -115,7 +115,7 @@ namespace PogoAI.Patches
         {
             static void Postfix(ref float __result)
             {
-                __result *= 5;
+                __result *= 3;
             }
         }
 
