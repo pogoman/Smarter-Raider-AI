@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Verse.AI;
 using Verse;
+using Verse.AI.Group;
 
 namespace PogoAI.Patches
 {
@@ -14,14 +15,18 @@ namespace PogoAI.Patches
     {
         public static void Postfix(CastPositionRequest newReq, ref bool __result)
         {
-            var lordToil = RimWorld.BreachingUtility.LordToilOf(newReq.caster);
-            if (!__result && (lordToil?.useAvoidGrid ?? false))
+            var lord = newReq.caster?.GetLord();
+            if (lord != null && lord.CurLordToil is RimWorld.LordToil_AssaultColonyBreaching)
             {
-                lordToil.useAvoidGrid = false;
-                lordToil.Data.Reset();
+                var lordToil = lord.CurLordToil as RimWorld.LordToil_AssaultColonyBreaching;
+                if (!__result && (lordToil?.useAvoidGrid ?? false))
+                {
+                    lordToil.useAvoidGrid = false;
+                    lordToil.Data.Reset();
 #if DEBUG
                 Log.Message($"Couldnt find cast position so disabling avoid grid for breaching");
 #endif
+                }
             }
         }
     }
