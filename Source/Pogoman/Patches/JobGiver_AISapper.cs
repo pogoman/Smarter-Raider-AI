@@ -84,6 +84,7 @@ namespace PogoAI.Patches
                 }
 
                 if (pathCostCache.RemoveAll(x => x.attackTarget.ThreatDisabled(pawn) || x.attackTarget.Thing.Destroyed 
+                    || (x.blockingThing == null && !x.pawn.Position.WithinRegions(x.cellBefore, pawn.Map, 9, TraverseMode.NoPassClosedDoors, RegionType.Set_Passable))
                     || (x.blockingThing != null && !Utilities.CellBlockedFor(pawn, x.blockingThing.Position))) > 0)
                 {
 #if DEBUG
@@ -107,14 +108,9 @@ namespace PogoAI.Patches
                 if (memoryValue == null)
                 {
                     var attackTargets = pawn.Map.attackTargetsCache.GetPotentialTargetsFor(pawn)
-                        .Where(x => !x.ThreatDisabled(pawn) && !x.Thing.Destroyed && x.Thing.Faction == Faction.OfPlayer);
-
-#if DEBUG
-                    Log.Message($"{pawn} Attack targets: {string.Join(",", attackTargets)}");
-#endif
+                        .Where(x => !x.ThreatDisabled(pawn) && !x.Thing.Destroyed && x.Thing.Faction == Faction.OfPlayer && !pathCostCache.Any(y => y.pawn == x.Thing));
 
                     attackTarget = attackTargets.RandomElement();
-
                     if (attackTarget == null)
                     {
                         return false;

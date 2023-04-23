@@ -24,7 +24,15 @@ namespace PogoAI.Patches
                 {
                     AvoidGrid_Regenerate.PrintAvoidGridAroundPos(__instance.pawn.Map.avoidGrid, __instance.pawn.Map, __instance.pawn.mindState.enemyTarget.Position, 1, 1000);
                 }
-                JobGiver_AISapper.pathCostCache.RemoveAll(x => x.blockingThing == null && x.cellBefore.DistanceTo(__instance.pawn.Position) < 5);
+                if (Utilities.GetNearestThingDef(__instance.pawn, ThingDefOf.Wall, 1) != null)
+                {
+#if DEBUG
+                    Log.Message($"{__instance.pawn} died in near base, clearing cache...");
+#endif
+                    JobGiver_AISapper.pathCostCache.Clear();
+                    JobGiver_AISapper.findNewPaths = true;
+                    //JobGiver_AISapper.pathCostCache.RemoveAll(x => x.blockingThing == null && x.cellBefore.DistanceTo(__instance.pawn.Position) < 5);
+                }
             }
         }
     }
