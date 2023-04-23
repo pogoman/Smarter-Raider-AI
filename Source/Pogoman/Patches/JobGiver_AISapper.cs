@@ -106,8 +106,14 @@ namespace PogoAI.Patches
   
                 if (memoryValue == null)
                 {
-                    attackTarget = pawn.Map.attackTargetsCache.GetPotentialTargetsFor(pawn)
-                        .Where(x => !x.ThreatDisabled(pawn) && !x.Thing.Destroyed && x.Thing.Faction == Faction.OfPlayer).RandomElement();
+                    var attackTargets = pawn.Map.attackTargetsCache.GetPotentialTargetsFor(pawn)
+                        .Where(x => !x.ThreatDisabled(pawn) && !x.Thing.Destroyed && x.Thing.Faction == Faction.OfPlayer);
+
+#if DEBUG
+                    Log.Message($"{pawn} Attack targets: {string.Join(",", attackTargets)}");
+#endif
+
+                    attackTarget = attackTargets.RandomElement();
 
                     if (attackTarget == null)
                     {

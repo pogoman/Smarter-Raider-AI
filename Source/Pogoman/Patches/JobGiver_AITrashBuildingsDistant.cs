@@ -16,6 +16,10 @@ namespace PogoAI.Patches
     {
         static bool Prefix(Pawn pawn, ref Job __result)
         {
+            if (pawn.mindState?.duty?.def != DutyDefOf.AssaultColony)
+            {
+                return true;
+            }
             JobGiver_AISapper_TryGiveJob_Patch.Prefix(pawn, ref __result);
             return false;                
         }
