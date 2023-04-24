@@ -132,28 +132,31 @@ namespace PogoAI.Patches
                     {
                         IntVec3 cellBeforeBlocker = IntVec3.Invalid;
                         IntVec3 cellAfterBlocker = IntVec3.Invalid;
-                        Thing blockingThing = pawnPath.FirstBlockingBuilding(out cellBeforeBlocker, pawn);
-                        if (blockingThing == null && pawnPath.nodes.Count > 1)
+                        if (pawnPath != PawnPath.NotFound)
                         {
-                            cellBeforeBlocker = pawnPath.nodes[1];
+                            Thing blockingThing = pawnPath.FirstBlockingBuilding(out cellBeforeBlocker, pawn);
+                            if (blockingThing == null && pawnPath.nodes.Count > 1)
+                            {
+                                cellBeforeBlocker = pawnPath.nodes[1];
 #if DEBUG
-                            Log.Message($"{pawn} targ: {attackTarget} no blocker {cellBeforeBlocker} Cost: {pawnPath.TotalCost} Length: {pawnPath.nodes.Count}");
+                                Log.Message($"{pawn} targ: {attackTarget} no blocker {cellBeforeBlocker} Cost: {pawnPath.TotalCost} Length: {pawnPath.nodes.Count}");
+#endif
+                            }
+                            else
+                            {
+                                cellAfterBlocker = blockingThing.Position - cellBeforeBlocker + blockingThing.Position;
+#if DEBUG
+                                Find.CurrentMap.debugDrawer.FlashCell(blockingThing.Position, 1f, $"b{pawnPath.TotalCost}", 300);
+                                Log.Message($"{pawn} targ: {attackTarget} blocked {blockingThing} cb: {cellBeforeBlocker} ca: {cellAfterBlocker} " +
+                                    $"reg: {Utilities.CellBlockedFor(pawn, blockingThing.Position)} Cost: {pawnPath.TotalCost} Length: {pawnPath.nodes.Count}");
+#endif
+                            }
+                            memoryValue = new CachedPath(pawn, attackTarget, blockingThing, cellBeforeBlocker, cellAfterBlocker);
+                            pathCostCache.Add(memoryValue);
+#if DEBUG
+                            Log.Message($"{pawn} targ: {attackTarget} added to cache. INDEX: {pathCostCache.Count - 1}");
 #endif
                         }
-                        else
-                        {
-                            cellAfterBlocker = blockingThing.Position - cellBeforeBlocker + blockingThing.Position;
-#if DEBUG
-                            Find.CurrentMap.debugDrawer.FlashCell(blockingThing.Position, 1f, $"b{pawnPath.TotalCost}", 300);
-                            Log.Message($"{pawn} targ: {attackTarget} blocked {blockingThing} cb: {cellBeforeBlocker} ca: {cellAfterBlocker} " +
-                                $"reg: {Utilities.CellBlockedFor(pawn, blockingThing.Position)} Cost: {pawnPath.TotalCost} Length: {pawnPath.nodes.Count}");
-#endif
-                        }
-                        memoryValue = new CachedPath(pawn, attackTarget, blockingThing, cellBeforeBlocker, cellAfterBlocker);
-                        pathCostCache.Add(memoryValue);
-#if DEBUG
-                        Log.Message($"{pawn} targ: {attackTarget} added to cache. INDEX: {pathCostCache.Count - 1}");
-#endif
                     }
                 }
                 else if (memoryValue == null)
