@@ -19,19 +19,23 @@ namespace PogoAI.Patches
         {
             if (__instance.pawn != null && __instance.pawn.Position.IsValid && __instance.pawn.Faction.HostileTo(Faction.OfPlayer) && __instance.pawn.Faction != Faction.OfInsects)
             {
-                AvoidGrid_Regenerate.PrintAvoidGridAroundPos(__instance.pawn.Map.avoidGrid, __instance.pawn.Map, __instance.pawn.Position, 1, 1000);
-                if (__instance.pawn.mindState.enemyTarget != null)
+                var avoidGrid = __instance.pawn.Map.avoidGrid;
+                if (avoidGrid?.grid != null)
                 {
-                    AvoidGrid_Regenerate.PrintAvoidGridAroundPos(__instance.pawn.Map.avoidGrid, __instance.pawn.Map, __instance.pawn.mindState.enemyTarget.Position, 1, 1000);
-                }
-                if (Utilities.GetNearestThingDef(__instance.pawn, ThingDefOf.Wall, 1) != null)
-                {
+                    var clearPaths = avoidGrid.grid[__instance.pawn.Position] == 0;
+                    AvoidGrid_Regenerate.PrintAvoidGridAroundPos(__instance.pawn.Map.avoidGrid, __instance.pawn.Map, __instance.pawn.Position, 1, 1000);
+                    if (__instance.pawn.mindState.enemyTarget != null)
+                    {
+                        AvoidGrid_Regenerate.PrintAvoidGridAroundPos(__instance.pawn.Map.avoidGrid, __instance.pawn.Map, __instance.pawn.mindState.enemyTarget.Position, 1, 1000);
+                    }
+                    if (clearPaths && Utilities.GetNearestThingDesignationDef(__instance.pawn, DesignationCategoryDefOf.Structure, 1) != null)
+                    {
 #if DEBUG
                     Log.Message($"{__instance.pawn} died in near base, clearing cache...");
 #endif
-                    JobGiver_AISapper.pathCostCache.Clear();
-                    JobGiver_AISapper.findNewPaths = true;
-                    //JobGiver_AISapper.pathCostCache.RemoveAll(x => x.blockingThing == null && x.cellBefore.DistanceTo(__instance.pawn.Position) < 5);
+                        JobGiver_AISapper.pathCostCache.Clear();
+                        JobGiver_AISapper.findNewPaths = true;
+                    }
                 }
             }
         }

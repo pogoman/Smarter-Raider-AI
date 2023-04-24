@@ -113,15 +113,18 @@ namespace PogoAI.Patches
                     attackTarget = attackTargets.RandomElement();
                     if (attackTarget == null)
                     {
-                        return false;
+                        findNewPaths = false;
                     }
-                    intVec = attackTarget.Thing.Position;
+                    else
+                    {
+                        intVec = attackTarget.Thing.Position;
 #if DEBUG
-                    Find.CurrentMap.debugDrawer.FlashCell(attackTarget.Thing.Position, 0.8f, $"{attackTarget.Thing}", 60);
+                        Find.CurrentMap.debugDrawer.FlashCell(attackTarget.Thing.Position, 0.8f, $"{attackTarget.Thing}", 60);
 #endif
+                    }
                 }
                     
-                if (memoryValue == null && findNewPaths && pathCostCache.Count <= Init.settings.maxSappers)
+                if (findNewPaths && memoryValue == null && pathCostCache.Count <= Init.settings.maxSappers)
                 {
                     customTuning.custom = new CustomTuning(pawn);
                     using (PawnPath pawnPath = pawn.Map.pathFinder.FindPath(pawn.Position, intVec,
@@ -146,33 +149,24 @@ namespace PogoAI.Patches
                                 $"reg: {Utilities.CellBlockedFor(pawn, blockingThing.Position)} Cost: {pawnPath.TotalCost} Length: {pawnPath.nodes.Count}");
 #endif
                         }
-                        memoryValue = pathCostCache.FirstOrDefault(x => x.cellBefore == cellBeforeBlocker);
-                        if (memoryValue == null)
-                        {
-                            memoryValue = new CachedPath(pawn, attackTarget, blockingThing, cellBeforeBlocker, cellAfterBlocker);
-                            pathCostCache.Add(memoryValue);
+                        memoryValue = new CachedPath(pawn, attackTarget, blockingThing, cellBeforeBlocker, cellAfterBlocker);
+                        pathCostCache.Add(memoryValue);
 #if DEBUG
-                            Log.Message($"{pawn} targ: {attackTarget} added to cache. INDEX: {pathCostCache.Count - 1}");
+                        Log.Message($"{pawn} targ: {attackTarget} added to cache. INDEX: {pathCostCache.Count - 1}");
 #endif
-                        }
-                        else
-                        {
-                            findNewPaths = false;
-                            memoryValue = null;
-#if DEBUG
-                            Log.Message($"{pawn} targ: {attackTarget} already cached disable findNew");
-#endif
-                        }
                     }
                 }
                 else if (memoryValue == null)
                 {
-                    var findTarget = pathCostCache.FirstOrDefault(x => x.attackTarget == attackTarget && x.blockingThing == null);
-                    if (findTarget != null)
+                    if (attackTarget != null)
                     {
-                        memoryValue = findTarget;
+                        var findTarget = pathCostCache.FirstOrDefault(x => x.attackTarget == attackTarget && x.blockingThing == null);
+                        if (findTarget != null)
+                        {
+                            memoryValue = findTarget;
+                        }
                     }
-                    else
+                    if (memoryValue == null)
                     {
                         var sappingPawn = pawn.Map.mapPawns.SpawnedPawnsInFaction(pawn.Faction).Where(x => x.CurJobDef == JobDefOf.Mine || x.CurJobDef == JobDefOf.AttackMelee)
                             .OrderBy(x => x.Position.DistanceTo(pawn.Position)).FirstOrDefault();

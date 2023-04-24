@@ -8,17 +8,17 @@ using Verse;
 
 namespace PogoAI.Patches
 {
-    internal class Lord
+    [HarmonyPatch(typeof(Verse.AI.Group.Lord), "LordTick")]
+    static class Lord_LordTick
     {
-        [HarmonyPatch(typeof(Verse.AI.Group.Lord), "LordTick")]
-        static class Lord_LordTick
+        static int lastUpdateTicks = 0;
+
+        static void Postfix(Verse.AI.Group.Lord __instance)
         {
-            static void Postfix(Verse.AI.Group.Lord __instance)
+            if ((Find.TickManager.TicksGame - lastUpdateTicks) / 60 > 5)
             {
-                if (__instance.ticksInToil % 300 == 0)
-                {
-                    __instance.Map.avoidGrid.gridDirty = true;
-                }
+                __instance.Map.avoidGrid.gridDirty = true;
+                lastUpdateTicks = Find.TickManager.TicksGame;
             }
         }
     }

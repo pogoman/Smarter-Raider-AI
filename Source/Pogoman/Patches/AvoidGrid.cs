@@ -10,6 +10,7 @@ using System.Threading;
 using Unity.Baselib.LowLevel;
 using UnityEngine;
 using UnityEngine.Networking.Types;
+using UnityEngine.SocialPlatforms;
 using Verse;
 using Verse.AI;
 using Verse.Noise;
@@ -57,12 +58,19 @@ namespace PogoAI.Patches
                 }
 
                 //Colonist Pawns
-
                 var draftedColonists = __instance.map.PlayerPawnsForStoryteller.Where(x =>
                     x.Drafted && x.equipment?.PrimaryEq != null && x.CurJobDef == JobDefOf.Wait_Combat && x.TargetCurrentlyAimingAt == null);
                 foreach (var pawn in draftedColonists)
                 {
-                    PrintAvoidGridLOSThing(__instance, pawn.Map, pawn.Position, pawn.equipment.PrimaryEq.PrimaryVerb, true);
+                    var verb = pawn.equipment.PrimaryEq.PrimaryVerb;
+                    if (verb.IsMeleeAttack)
+                    {
+                        PrintAvoidGridAroundPos(__instance, __instance.map, pawn.Position, 1);
+                    }
+                    else
+                    {
+                        PrintAvoidGridLOSThing(__instance, pawn.Map, pawn.Position, verb, true);
+                    }
                 }
 
                 //Turrets
@@ -102,7 +110,7 @@ namespace PogoAI.Patches
                         }
                     }
                 }
-                __instance.ExpandAvoidGridIntoEdifices();
+                //__instance.ExpandAvoidGridIntoEdifices();
                 //Log.Message($"Count: {counter}");
 
             }
@@ -121,11 +129,7 @@ namespace PogoAI.Patches
             {
                 return;
             }
-            float range = verb.verbProps.range;
-            if (verb.IsMeleeAttack)
-            {
-                range = 2;
-            }
+            float range = verb.verbProps.range;            
             tempGrid = new ByteGrid(map);
             float num = verb.verbProps.EffectiveMinRange(true);
             int num2 = GenRadial.NumCellsInRadius(range);

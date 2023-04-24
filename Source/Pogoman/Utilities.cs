@@ -212,7 +212,7 @@ namespace PogoAI
             return things;
         }
 
-        public static Thing GetNearestThingDef(Pawn pawn, ThingDef thingDef, int radius)
+        public static Thing GetNearestThingDesignationDef(Pawn pawn, DesignationCategoryDef category, int radius)
         {
             Building building = null;
             for (int i = 0; i < GenRadial.NumCellsInRadius(radius); i++)
@@ -221,7 +221,7 @@ namespace PogoAI
                 if (c.InBounds(pawn.Map))
                 {
                     var edifice = c.GetEdifice(pawn.Map);
-                    if (edifice != null && edifice.def == thingDef && edifice.HitPoints > 0)
+                    if (edifice != null && edifice.def.designationCategory == category && edifice.HitPoints > 0)
                     {
                         building = edifice;
                         break;
