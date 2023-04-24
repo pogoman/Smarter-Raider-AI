@@ -110,7 +110,7 @@ namespace PogoAI.Patches
                         }
                     }
                 }
-                //__instance.ExpandAvoidGridIntoEdifices();
+                __instance.ExpandAvoidGridIntoEdifices();
                 //Log.Message($"Count: {counter}");
 
             }
