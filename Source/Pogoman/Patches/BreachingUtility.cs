@@ -18,20 +18,25 @@ namespace PogoAI.Patches
             //Everything here needs to be efficient, called 100000s times
             static bool Prefix(IntVec3 c, ref bool __result, BreachRangedCastPositionFinder __instance)
             {
+                __result = true;
                 if (__instance.verb == null)
                 {
-                    __result = true;
                     return false;
                 }
 
                 //Check weapon min range in case of splash (cheaper than original code)
-                float modifier = 5;
-                if (__instance.verb.EquipmentCompSource?.parent?.def?.weaponTags?.Any(x => x.Matches("grenade")) ?? false)
+                ThingDef projectile = __instance.verb.GetProjectile();
+                Log.Message($"rad: {projectile.projectile.explosionRadius}");
+                if (projectile != null && projectile.projectile.explosionRadius > 0f)
                 {
-                    modifier = 1.5f;
+                    float modifier = 5;
+                    if (__instance.verb.EquipmentCompSource?.parent?.def.thingCategories.FirstOrDefault()?.defName == "Grenades")
+                    {
+                        modifier = 1.5f;
+                    }
+                    var effective = __instance.verb.EffectiveRange * __instance.verb.EffectiveRange / modifier;
+                    __result = __instance.target.Position.DistanceToSquared(c) > effective;
                 }
-                var effective = __instance.verb.EffectiveRange * __instance.verb.EffectiveRange / modifier;
-                __result = __instance.target.Position.DistanceToSquared(c) > effective;
 
                 //Check for nearby reserved firingpos in case of FF in CE (mainly a problem for cents)
                 if (__result && __instance.verb.EffectiveRange > 30)
