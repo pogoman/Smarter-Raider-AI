@@ -8,6 +8,7 @@ using Verse;
 using Verse.AI;
 using UnityEngine;
 using PogoAI.Extensions;
+using RimWorld;
 
 namespace PogoAI.Patches
 {
@@ -67,7 +68,7 @@ namespace PogoAI.Patches
                     return true;
                 }
                 __result = __instance.TryFindShootLineFromTo(root, targ, out resultingLine);
-                if (__result)
+                if (__result && __instance.CasterPawn?.mindState?.duty?.def != DutyDefOf.Breaching)
                 {
                     return true;
                 }

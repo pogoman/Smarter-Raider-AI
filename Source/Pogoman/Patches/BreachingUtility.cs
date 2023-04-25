@@ -4,6 +4,7 @@ using RimWorld;
 using System;
 using System.Linq;
 using Verse;
+using Verse.AI;
 using static RimWorld.BreachingUtility;
 
 namespace PogoAI.Patches
@@ -26,17 +27,20 @@ namespace PogoAI.Patches
 
                 //Check weapon min range in case of splash (cheaper than original code)
                 ThingDef projectile = __instance.verb.GetProjectile();
-                Log.Message($"rad: {projectile.projectile.explosionRadius}");
+                float modifier = 10;
                 if (projectile != null && projectile.projectile.explosionRadius > 0f)
                 {
-                    float modifier = 5;
                     if (__instance.verb.EquipmentCompSource?.parent?.def.thingCategories.FirstOrDefault()?.defName == "Grenades")
                     {
                         modifier = 1.5f;
                     }
-                    var effective = __instance.verb.EffectiveRange * __instance.verb.EffectiveRange / modifier;
-                    __result = __instance.target.Position.DistanceToSquared(c) > effective;
+                    else
+                    {
+                        modifier = 5;
+                    }
                 }
+                var effective = __instance.verb.EffectiveRange * __instance.verb.EffectiveRange / modifier;
+                __result = __instance.target.Position.DistanceToSquared(c) > effective;
 
                 //Check for nearby reserved firingpos in case of FF in CE (mainly a problem for cents)
                 if (__result && __instance.verb.EffectiveRange > 30)
@@ -49,7 +53,7 @@ namespace PogoAI.Patches
                             if (reservation.claimant?.mindState?.duty?.def == DutyDefOf.Breaching)
                             {
                                 var num = (float)(c - reservation.target).LengthHorizontalSquared;
-                                if (num < 100f && InFiringLine(c, reservation.target, __instance.target.Position))
+                                if ((projectile.projectile.explosionRadius == 0f || num < 100f) && InFiringLine(c, reservation.target, __instance.target.Position))
                                 {
                                     __result = false;
                                     break;
