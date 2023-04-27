@@ -9,7 +9,9 @@ namespace PogoAI
         {
             JobGiver_AISapper.pathCostCache.Clear();
             JobGiver_AISapper.findNewPaths = true;
-            AvoidGrid_Regenerate.lastUpdateTicks = 0;
+            AvoidGrid_Regenerate.lastUpdateTicks = 0; 
+            BreachingUtility.breachMineables = false;
+            BreachingUtility.enforceMinimumRange = true;
         }
     }
 }

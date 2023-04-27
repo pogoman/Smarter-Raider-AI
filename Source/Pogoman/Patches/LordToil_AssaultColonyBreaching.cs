@@ -12,7 +12,7 @@ namespace PogoAI.Patches
         {
             static void Postfix(RimWorld.LordToil_AssaultColonyBreaching __instance)
             {
-                __instance.Data.maxRange = 75f;
+                __instance.Data.maxRange = 65f;
             }
 
             static bool Prefix(RimWorld.LordToil_AssaultColonyBreaching __instance)

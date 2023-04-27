@@ -18,6 +18,7 @@ namespace PogoAI.Patches
                     __instance.useAvoidGridSmart = true;
                 }
                 BreachingUtility.breachMineables = false;
+                BreachingUtility.enforceMinimumRange = true;
                 JobGiver_AISapper.pathCostCache.Clear();
                 JobGiver_AISapper.findNewPaths = true;
             }

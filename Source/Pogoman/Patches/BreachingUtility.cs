@@ -12,6 +12,7 @@ namespace PogoAI.Patches
     public class BreachingUtility
     {
         public static bool breachMineables = false;
+        public static bool enforceMinimumRange = true;
 
         [HarmonyPatch(typeof(BreachRangedCastPositionFinder), "SafeForRangedCast")]
         static class BreachRangedCastPositionFinder_SafeForRangedCast
@@ -40,7 +41,7 @@ namespace PogoAI.Patches
                     }
                 }
                 var effective = __instance.verb.EffectiveRange * __instance.verb.EffectiveRange / modifier;
-                __result = __instance.target.Position.DistanceToSquared(c) > effective;
+                __result = !enforceMinimumRange || __instance.target.Position.DistanceToSquared(c) > effective;
 
                 //Check for nearby reserved firingpos in case of FF in CE (mainly a problem for cents)
                 if (__result && __instance.verb.EffectiveRange > 30)
@@ -91,6 +92,21 @@ namespace PogoAI.Patches
                     }
                 }
                 return false;
+            }
+        }
+
+        [HarmonyPatch(typeof(BreachRangedCastPositionFinder), "TryFindRangedCastPosition")]
+        static class BreachRangedCastPositionFinder_TryFindRangedCastPosition
+        {
+            static void Postfix(ref bool __result)
+            {
+                if (enforceMinimumRange && !__result)
+                {
+                    enforceMinimumRange = false;
+#if DEBUG
+                    Log.Message("SRAI: Could not find breach cast pos so disabling minimum range check");
+#endif
+                }
             }
         }
 
@@ -161,7 +177,7 @@ namespace PogoAI.Patches
                 {
                     if (Init.combatExtended)
                     {
-                        if (new string[] { "inferno", "charge blast", "thermal", "thump" }.Any(
+                        if (new string[] { "inferno", "chargeblast", "thermal", "thump" }.Any(
                             x => weapon.Matches(x)))
                         {
                             if (!pawn.inventory.innerContainer.Any(x => x.ToString().Matches("ammo")))
