@@ -16,12 +16,13 @@ namespace PogoAI.Patches
     {
         static bool Prefix(Pawn pawn, ref Job __result)
         {
-            if (pawn.mindState?.duty?.def != DutyDefOf.AssaultColony)
+            if (pawn.mindState?.duty?.def != DutyDefOf.AssaultColony
+                || pawn.Map.attackTargetsCache.GetPotentialTargetsFor(pawn).Count(x => !x.ThreatDisabled(pawn) && !x.Thing.Destroyed && x.Thing.Faction == Faction.OfPlayer) == 0)
             {
                 return true;
             }
             JobGiver_AISapper_TryGiveJob_Patch.Prefix(pawn, ref __result);
-            return false;                
+            return false;
         }
     }
 }

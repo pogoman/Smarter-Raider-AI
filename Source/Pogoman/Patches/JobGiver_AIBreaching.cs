@@ -24,6 +24,10 @@ namespace PogoAI.Patches
                 Log.Message($"Couldnt find breach job so disabling avoid grid for breaching");
 #endif
             }
+            else if (__result != null)
+            {
+                __result.expiryInterval = Rand.RangeInclusive(120, 240);
+            }
         }
     }
 
