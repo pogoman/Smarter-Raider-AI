@@ -70,7 +70,9 @@ namespace PogoAI.Patches
         {
             public static bool Prefix(Pawn pawn, ref Job __result)
             {
-                if (pawn.Faction == Faction.OfInsects || !pawn.Map.IsPlayerHome || pawn.mindState?.duty?.def == DutyDefOf.AssaultThing)
+                if (pawn.Faction == Faction.OfInsects || !pawn.Map.IsPlayerHome 
+                    || pawn.mindState?.duty?.def == DutyDefOf.AssaultThing
+                    || pawn.mindState?.duty?.def == DutyDefOf.PrisonerEscapeSapper)
                 {
                     return true;
                 }
