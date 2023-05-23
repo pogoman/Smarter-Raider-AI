@@ -1,10 +1,13 @@
 ﻿using HarmonyLib;
+using Mono.Unix.Native;
 using PogoAI.Extensions;
 using RimWorld;
 using System;
 using System.Linq;
+using UnityEngine;
 using Verse;
 using Verse.AI;
+using Verse.AI.Group;
 using static RimWorld.BreachingUtility;
 
 namespace PogoAI.Patches
@@ -20,6 +23,11 @@ namespace PogoAI.Patches
             //Everything here needs to be efficient, called 100000s times
             static bool Prefix(IntVec3 c, ref bool __result, BreachRangedCastPositionFinder __instance)
             {
+                if (!SafeUseableFiringPosition(__instance.breachingGrid, c))
+                {
+                    __result = false;
+                    return false;
+                }
                 __result = true;
                 if (__instance.verb == null)
                 {
@@ -48,17 +56,15 @@ namespace PogoAI.Patches
                 {
                     if (__instance.breachingGrid.map.pawnDestinationReservationManager.reservedDestinations.ContainsKey(__instance.verb.Caster.Faction))
                     {
-                        var reservations = __instance.breachingGrid.map.pawnDestinationReservationManager.reservedDestinations[__instance.verb.Caster.Faction].list;
+                        var reservations = __instance.breachingGrid.map.pawnDestinationReservationManager.reservedDestinations[__instance.verb.Caster.Faction]
+                           .list.Where(x => x.job?.def == JobDefOf.UseVerbOnThing);
                         foreach (var reservation in reservations)
                         {
-                            if (reservation.claimant?.mindState?.duty?.def == DutyDefOf.Breaching)
+                            var num = (float)(c - reservation.target).LengthHorizontalSquared;
+                            if ((projectile.projectile.explosionRadius == 0f || num < 100f) && PointsCollinear(c, reservation.target, __instance.target.Position, 10))
                             {
-                                var num = (float)(c - reservation.target).LengthHorizontalSquared;
-                                if ((projectile.projectile.explosionRadius == 0f || num < 100f) && InFiringLine(c, reservation.target, __instance.target.Position))
-                                {
-                                    __result = false;
-                                    break;
-                                }
+                                __result = false;
+                                break;
                             }
                         }
                     }
@@ -67,46 +73,41 @@ namespace PogoAI.Patches
                 return false;
             }
 
-            static bool InFiringLine(IntVec3 c, IntVec3 firingPos, IntVec3 breachTarget)
+            public static bool PointsCollinear(IntVec3 a, IntVec3 b, IntVec3 c, float tolerance)
             {
-                var dxc = c.x - firingPos.x;
-                var dyc = c.y - firingPos.y;
-
-                var dxl = breachTarget.x - firingPos.x;
-                var dyl = breachTarget.y - firingPos.y;
-
-                var cross = dxc * dyl - dyc * dxl;
-                if (Math.Abs(cross) < 3)
+                if (b.x - a.x == 0 && c.x - a.x == 0)
                 {
-                    if (Math.Abs(dxl) >= Math.Abs(dyl))
-                    {
-                        return dxl > 0 ?
-                          firingPos.x <= c.x && c.x <= breachTarget.x :
-                          breachTarget.x <= c.x && c.x <= firingPos.x;
-                    }
-                    else
-                    {
-                        return dyl > 0 ?
-                          firingPos.y <= c.y && c.y <= breachTarget.y :
-                          breachTarget.y <= c.y && c.y <= firingPos.y;
-                    }
+                    return true;
                 }
-                return false;
+                float slopeAB = Math.Abs(a.x == b.x ? float.PositiveInfinity : (b.y - a.y) / (b.x - a.x));
+                float slopeAC = Math.Abs(a.x == c.x ? float.PositiveInfinity : (c.y - a.y) / (c.x - a.x));
+
+                return (slopeAC != float.PositiveInfinity && slopeAB != float.PositiveInfinity && slopeAB - slopeAC > tolerance) || slopeAB - slopeAC == 0;
             }
+
         }
 
         [HarmonyPatch(typeof(BreachRangedCastPositionFinder), "TryFindRangedCastPosition")]
         static class BreachRangedCastPositionFinder_TryFindRangedCastPosition
         {
-            static void Postfix(ref bool __result)
+            static void Postfix(Pawn pawn, ref bool __result)
             {
-                if (enforceMinimumRange && !__result)
+                var lord = pawn.GetLord();
+                if (!__result && !lord.ownedPawns.Any(x => x.CurJob?.def == JobDefOf.UseVerbOnThing))
                 {
-                    enforceMinimumRange = false;
+                    var data = LordDataFor(lord);
+                    data.Reset();
 #if DEBUG
-                    Log.Message("SRAI: Could not find breach cast pos so disabling minimum range check");
+                    Log.Message("Could not find breach cast pos for any breacher so resetting breach data");
 #endif
-                }
+                    if (enforceMinimumRange)
+                    {
+                        enforceMinimumRange = false;
+#if DEBUG
+                        Log.Message("Could not find breach cast pos so disabling minimum range check");
+#endif
+                    }
+                }                
             }
         }
 
@@ -123,6 +124,16 @@ namespace PogoAI.Patches
             }
         }
 
+        [HarmonyPatch(typeof(BreachingGrid), "CreateBreachPath")]
+        static class BreachingGrid_CreateBreachPath
+        {
+            static void Prefix(ref int breachRadius, ref int walkMargin)
+            {
+                //breachRadius = breachRadius * 3;
+                walkMargin = walkMargin * 5;
+            }
+        }
+
         [HarmonyPatch(typeof(Verse.AI.BreachingGrid), "FindBuildingToBreach")]
         static class FindBuildingToBreach_FindBuildingToBreach
         {
@@ -131,6 +142,9 @@ namespace PogoAI.Patches
                 if (__result == null && !breachMineables)
                 {
                     breachMineables = true;
+#if DEBUG
+                    Log.Message("Could not find breach building so enabling breachMineables");
+#endif
                 }
             }
         }

@@ -68,7 +68,7 @@ namespace PogoAI.Patches
                     return true;
                 }
                 __result = __instance.TryFindShootLineFromTo(root, targ, out resultingLine);
-                if (__result && __instance.CasterPawn?.mindState?.duty?.def != DutyDefOf.Breaching)
+                if (__result /*&& __instance.CasterPawn?.mindState?.duty?.def != DutyDefOf.Breaching*/)
                 {
                     return true;
                 }
