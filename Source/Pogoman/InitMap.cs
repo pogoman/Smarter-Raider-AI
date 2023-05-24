@@ -12,6 +12,7 @@ namespace PogoAI
             AvoidGrid_Regenerate.lastUpdateTicks = 0; 
             BreachingUtility.breachMineables = false;
             BreachingUtility.enforceMinimumRange = true;
+            BreachingUtility.doneReset = false;
         }
     }
 }

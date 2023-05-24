@@ -30,26 +30,4 @@ namespace PogoAI.Patches
             }
         }
     }
-
-    [HarmonyPatch(typeof(RimWorld.JobGiver_AIBreaching), "UpdateBreachingTarget")]
-    static class JobGiver_AIBreaching_UpdateBreachingTarget
-    {
-        public static void Prefix(Pawn pawn)
-        {
-            var breachingTargetData = pawn.mindState.breachingTarget;
-            if (breachingTargetData != null && breachingTargetData.target == null)
-            {
-                pawn.mindState.breachingTarget = null;
-                var lordToil_AssaultColonyBreaching = RimWorld.BreachingUtility.LordToilOf(pawn);
-                lordToil_AssaultColonyBreaching.Data.currentTarget = null;
-                if (!BreachingUtility.breachMineables)
-                {
-                    BreachingUtility.breachMineables = true;
-#if DEBUG
-                    Log.Message("Target is mineable, disabling breaching filter...");
-#endif
-                }
-            }
-        }
-    }
 }

@@ -16,6 +16,7 @@ namespace PogoAI.Patches
     {
         public static bool breachMineables = false;
         public static bool enforceMinimumRange = true;
+        public static bool doneReset = false;
 
         [HarmonyPatch(typeof(BreachRangedCastPositionFinder), "SafeForRangedCast")]
         static class BreachRangedCastPositionFinder_SafeForRangedCast
@@ -23,8 +24,9 @@ namespace PogoAI.Patches
             //Everything here needs to be efficient, called 100000s times
             static bool Prefix(IntVec3 c, ref bool __result, BreachRangedCastPositionFinder __instance)
             {
-                if (!SafeUseableFiringPosition(__instance.breachingGrid, c))
-                {
+                var map = __instance.breachingGrid.map;
+                if (!c.InBounds(map) || !c.Walkable(map))
+                { 
                     __result = false;
                     return false;
                 }
@@ -54,14 +56,14 @@ namespace PogoAI.Patches
                 //Check for nearby reserved firingpos in case of FF in CE (mainly a problem for cents)
                 if (__result && __instance.verb.EffectiveRange > 30)
                 {
-                    if (__instance.breachingGrid.map.pawnDestinationReservationManager.reservedDestinations.ContainsKey(__instance.verb.Caster.Faction))
+                    if (map.pawnDestinationReservationManager.reservedDestinations.ContainsKey(__instance.verb.Caster.Faction))
                     {
-                        var reservations = __instance.breachingGrid.map.pawnDestinationReservationManager.reservedDestinations[__instance.verb.Caster.Faction]
-                           .list.Where(x => x.job?.def == JobDefOf.UseVerbOnThing);
+                        var reservations = map.pawnDestinationReservationManager.reservedDestinations[__instance.verb.Caster.Faction]
+                           .list.Where(x => x.job?.def == JobDefOf.UseVerbOnThing && x.claimant.GetLord() == ((Pawn)__instance.verb.Caster).GetLord());
                         foreach (var reservation in reservations)
                         {
                             var num = (float)(c - reservation.target).LengthHorizontalSquared;
-                            if ((projectile.projectile.explosionRadius == 0f || num < 100f) && PointsCollinear(c, reservation.target, __instance.target.Position, 10))
+                            if ((projectile.projectile.explosionRadius == 0f || num < 100f) && PointsCollinear(c, reservation.target, __instance.target.Position, 1))
                             {
                                 __result = false;
                                 break;
@@ -69,7 +71,6 @@ namespace PogoAI.Patches
                         }
                     }
                 }
-
                 return false;
             }
 
@@ -79,10 +80,14 @@ namespace PogoAI.Patches
                 {
                     return true;
                 }
-                float slopeAB = Math.Abs(a.x == b.x ? float.PositiveInfinity : (b.y - a.y) / (b.x - a.x));
-                float slopeAC = Math.Abs(a.x == c.x ? float.PositiveInfinity : (c.y - a.y) / (c.x - a.x));
+                float slopeAB = (b.z - a.z) / (a.x == b.x ? float.PositiveInfinity : (b.x - a.x));
+                float slopeAC = (c.z - a.z) / (a.x == c.x ? float.PositiveInfinity : (c.x - a.x));
+                var difference = Math.Abs(slopeAB - slopeAC);
+#if DEBUG
+                Find.CurrentMap.debugDrawer.FlashCell(a, 0.2f, $"{difference}", 60);
+#endif
 
-                return (slopeAC != float.PositiveInfinity && slopeAB != float.PositiveInfinity && slopeAB - slopeAC > tolerance) || slopeAB - slopeAC == 0;
+                return difference < tolerance;
             }
 
         }
@@ -106,8 +111,15 @@ namespace PogoAI.Patches
 #if DEBUG
                         Log.Message("Could not find breach cast pos so disabling minimum range check");
 #endif
+                    } else if (doneReset && !breachMineables)
+                    {
+                        breachMineables = true;
+#if DEBUG
+                        Log.Message("Could not find cast after reset and no minrange so breachMineables");
+#endif
                     }
-                }                
+                    doneReset = true;
+                }
             }
         }
 
@@ -120,31 +132,6 @@ namespace PogoAI.Patches
                 {
                     Building edifice = c.GetEdifice(map);
                     __result = edifice?.Faction == Faction.OfPlayer || (breachMineables && edifice.def.mineable);
-                }
-            }
-        }
-
-        [HarmonyPatch(typeof(BreachingGrid), "CreateBreachPath")]
-        static class BreachingGrid_CreateBreachPath
-        {
-            static void Prefix(ref int breachRadius, ref int walkMargin)
-            {
-                //breachRadius = breachRadius * 3;
-                walkMargin = walkMargin * 5;
-            }
-        }
-
-        [HarmonyPatch(typeof(Verse.AI.BreachingGrid), "FindBuildingToBreach")]
-        static class FindBuildingToBreach_FindBuildingToBreach
-        {
-            static void Postfix(ref Thing __result)
-            {
-                if (__result == null && !breachMineables)
-                {
-                    breachMineables = true;
-#if DEBUG
-                    Log.Message("Could not find breach building so enabling breachMineables");
-#endif
                 }
             }
         }
