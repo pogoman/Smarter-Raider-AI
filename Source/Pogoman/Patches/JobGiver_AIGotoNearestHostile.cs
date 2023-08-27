@@ -17,7 +17,7 @@ namespace PogoAI.Patches
         {
             static bool Prefix(Pawn pawn, ref Job __result)
             {
-                return pawn.Faction == Faction.OfInsects || !pawn.Map.IsPlayerHome || pawn.mindState?.duty?.def != DutyDefOf.AssaultColony;
+                return pawn.Faction == Faction.OfInsects || !pawn.Map.IsPlayerHome || pawn.mindState?.duty?.def != DutyDefOf.AssaultColony || pawn.def.techLevel < Init.settings.minSmartTechLevel;
             }
         }
     }

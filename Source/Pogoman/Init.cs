@@ -4,6 +4,7 @@ using System.Linq;
 using HarmonyLib;
 using PogoAI.Extensions;
 using RimWorld;
+using RimWorld.Planet;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using Verse;
@@ -17,6 +18,7 @@ namespace PogoAI
         public int maxSappers = 20;
         public string breachWeapons = DEFAULT_BREACH_WEAPONS;
         public bool combatExtendedCompatPerf = true;
+        public TechLevel minSmartTechLevel = TechLevel.Neolithic;
 
         public override void ExposeData()
         {
@@ -24,6 +26,7 @@ namespace PogoAI
             Scribe_Values.Look(ref breachWeapons, "breachWeapons", DEFAULT_BREACH_WEAPONS, true);
             Scribe_Values.Look(ref combatExtendedCompatPerf, "combatExtendedCompatPerf", true, true);
             Scribe_Values.Look(ref maxSappers, "maxSappers", 20, true);
+            Scribe_Values.Look<TechLevel>(ref minSmartTechLevel, "minSmartTechLevel", TechLevel.Neolithic, true);
         }
     }
 
@@ -59,6 +62,20 @@ namespace PogoAI
             listingStandard.Begin(inRect);    
             listingStandard.AddLabeledTextField("Allowed Breach Weapons:\n(comma separated, case insensitive, partial match, no spaces)", ref settings.breachWeapons, 0.25f, 80);
             listingStandard.SliderLabeled("Maximum number of sappers per raid:\n(Higher numbers may affect performance)\n", ref settings.maxSappers, "{0}/50", 1, 50);
+            if (listingStandard.ButtonTextLabeled("Minimum Smart Raid Tech Level:\n(tech levels that use the avoid grid)\n", settings.minSmartTechLevel.ToString(), TextAnchor.UpperLeft, (string)null, (string)null))
+            {
+                List<FloatMenuOption> floatMenuOptionList = new List<FloatMenuOption>();
+                floatMenuOptionList.Add(new FloatMenuOption("Neolithic", (Action)(() => settings.minSmartTechLevel = TechLevel.Neolithic), (MenuOptionPriority)4, (Action<Rect>)null, (Thing)null, 0.0f, (Func<Rect, bool>)null, (WorldObject)null, true, 0));
+                floatMenuOptionList.Add(new FloatMenuOption("Medieval", (Action)(() => settings.minSmartTechLevel = TechLevel.Medieval), (MenuOptionPriority)4, (Action<Rect>)null, (Thing)null, 0.0f, (Func<Rect, bool>)null, (WorldObject)null, true, 0));
+                floatMenuOptionList.Add(new FloatMenuOption("Industrial", (Action)(() => settings.minSmartTechLevel = TechLevel.Industrial), (MenuOptionPriority)4, (Action<Rect>)null, (Thing)null, 0.0f, (Func<Rect, bool>)null, (WorldObject)null, true, 0));
+                floatMenuOptionList.Add(new FloatMenuOption("Spacer", (Action)(() => settings.minSmartTechLevel = TechLevel.Spacer), (MenuOptionPriority)4, (Action<Rect>)null, (Thing)null, 0.0f, (Func<Rect, bool>)null, (WorldObject)null, true, 0));
+                floatMenuOptionList.Add(new FloatMenuOption("Ultra", (Action)(() => settings.minSmartTechLevel = TechLevel.Ultra), (MenuOptionPriority)4, (Action<Rect>)null, (Thing)null, 0.0f, (Func<Rect, bool>)null, (WorldObject)null, true, 0));
+                floatMenuOptionList.Add(new FloatMenuOption("Archotech", (Action)(() => settings.minSmartTechLevel = TechLevel.Archotech), (MenuOptionPriority)4, (Action<Rect>)null, (Thing)null, 0.0f, (Func<Rect, bool>)null, (WorldObject)null, true, 0));
+                Find.WindowStack.Add((Window)new FloatMenu(floatMenuOptionList)
+                {
+                    vanishIfMouseDistant = true
+                });
+            }
             if (combatExtended)
             {
                 listingStandard.CheckboxLabeled("Enable Combat Extended Compatibility Performance fix: \n(recommeded to leave on. Requires game restart.)",
