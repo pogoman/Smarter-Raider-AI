@@ -103,7 +103,7 @@ namespace PogoAI
                 listingStandard.CheckboxLabeled("Enable Combat Extended Compatibility Performance fix: \n(recommeded to leave on. Requires game restart.)",
                     ref settings.combatExtendedCompatPerf);
             }
-            listingStandard.Label("WARNING: Advanced settings, change at your own risk. Any updates require a game restart.\n\nPathfinding algorithm cell cost values:\n");
+            listingStandard.Label("WARNING: Advanced settings below, change at your own risk. Any updates require a game restart.\n\nPathfinding algorithm cell cost values:\n");
             listingStandard.TextFieldNumericLabeled<int>($"Pawn/Turret LOS (additive on intersect) (def: {PogoSettings.AVOID_DEFAULT_COST})", ref settings.costLOS, ref settings.costLOSBuf);
             listingStandard.TextFieldNumericLabeled<int>($"OffLordWalkGrid (def: {PathFinderCostTuning.Cost_OffLordWalkGrid})", ref settings.costOffLordWalkGrid, ref settings.costOffLordWalkGridBuf);
             listingStandard.TextFieldNumericLabeled<float>($"BlockedDoorPerHitPoint (def: {PathFinderCostTuning.Cost_BlockedDoorPerHitPoint})", ref settings.costBlockedDoorPerHitPoint, ref settings.costBlockedDoorPerHitPointBuf);
