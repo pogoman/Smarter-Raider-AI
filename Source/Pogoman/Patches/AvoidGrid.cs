@@ -149,8 +149,8 @@ namespace PogoAI.Patches
         {
             if (tempGrid[cell] == 0)
             {
-                instance.IncrementAvoidGrid(cell, 45);
-                IncrementLocalAvoidGrid(tempGrid, cell, 45);
+                instance.IncrementAvoidGrid(cell, Init.settings.costLOS);
+                IncrementLocalAvoidGrid(tempGrid, cell, Init.settings.costLOS);
             }
             return true;
         }
@@ -162,8 +162,12 @@ namespace PogoAI.Patches
             grid[c] = b;
         }
 
-        public static void PrintAvoidGridAroundPos(AvoidGrid __instance, Map map, IntVec3 pos, int radius, int incAmount = 45)
+        public static void PrintAvoidGridAroundPos(AvoidGrid __instance, Map map, IntVec3 pos, int radius, int incAmount = -1)
         {
+            if (incAmount == -1)
+            {
+                incAmount = Init.settings.costLOS;
+            }
             for (int i = 0; i < GenRadial.NumCellsInRadius(radius); i++)
             {
                 IntVec3 intVec = pos + GenRadial.RadialPattern[i];

@@ -59,7 +59,15 @@ namespace PogoAI.Patches
 
         }
 
-        public static PathFinderCostTuning customTuning = new PathFinderCostTuning() {};
+        public static PathFinderCostTuning customTuning = new PathFinderCostTuning() 
+        {
+            costOffLordWalkGrid = Init.settings.costOffLordWalkGrid,
+            costBlockedDoorPerHitPoint = Init.settings.costBlockedDoorPerHitPoint,
+            costBlockedWallExtraForNaturalWalls = Init.settings.costBlockedWallExtraForNaturalWalls,
+            costBlockedWallExtraPerHitPoint = Init.settings.costBlockedWallExtraPerHitPoint,
+            costBlockedWallBase = Init.settings.costBlockedWallBase,
+            costBlockedDoor = Init.settings.costBlockedDoor
+        };
 
         public static List<CachedPath> pathCostCache = new List<CachedPath>();
 

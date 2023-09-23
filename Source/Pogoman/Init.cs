@@ -6,19 +6,34 @@ using PogoAI.Extensions;
 using RimWorld;
 using RimWorld.Planet;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 using Verse;
+using Verse.AI;
 
 namespace PogoAI
 {
     public class PogoSettings : ModSettings
     {
         public const string DEFAULT_BREACH_WEAPONS = "stickbomb, concussion, doom, triple, inferno, chargeblast, thermal, thump, cannon";
+        public const int AVOID_DEFAULT_COST = 45;
 
         public int maxSappers = 20;
         public string breachWeapons = DEFAULT_BREACH_WEAPONS;
         public bool combatExtendedCompatPerf = true;
         public TechLevel minSmartTechLevel = TechLevel.Neolithic;
+        public int costOffLordWalkGrid = PathFinderCostTuning.Cost_OffLordWalkGrid;
+        public string costOffLordWalkGridBuf;
+        public float costBlockedDoorPerHitPoint = PathFinderCostTuning.Cost_BlockedDoorPerHitPoint;
+        public string costBlockedDoorPerHitPointBuf;
+        public int costBlockedWallExtraForNaturalWalls = PathFinderCostTuning.Cost_BlockedWallExtraForNaturalWalls;
+        public string costBlockedWallExtraForNaturalWallsBuf;
+        public float costBlockedWallExtraPerHitPoint = PathFinderCostTuning.Cost_BlockedWallExtraPerHitPoint;
+        public string costBlockedWallExtraPerHitPointBuf;
+        public int costBlockedWallBase = PathFinderCostTuning.Cost_BlockedWallBase;
+        public string costBlockedWallBaseBuf;
+        public int costBlockedDoor = PathFinderCostTuning.Cost_BlockedDoor;
+        public string costBlockedDoorBuf;
+        public int costLOS = AVOID_DEFAULT_COST;
+        public string costLOSBuf;
 
         public override void ExposeData()
         {
@@ -27,6 +42,13 @@ namespace PogoAI
             Scribe_Values.Look(ref combatExtendedCompatPerf, "combatExtendedCompatPerf", true, true);
             Scribe_Values.Look(ref maxSappers, "maxSappers", 20, true);
             Scribe_Values.Look<TechLevel>(ref minSmartTechLevel, "minSmartTechLevel", TechLevel.Neolithic, true);
+            Scribe_Values.Look(ref costOffLordWalkGrid, "costOffLordWalkGrid", PathFinderCostTuning.Cost_OffLordWalkGrid, true);
+            Scribe_Values.Look(ref costBlockedDoorPerHitPoint, "costBlockedDoorPerHitPoint", PathFinderCostTuning.Cost_BlockedDoorPerHitPoint, true);
+            Scribe_Values.Look(ref costBlockedWallExtraForNaturalWalls, "costBlockedWallExtraForNaturalWalls", PathFinderCostTuning.Cost_BlockedWallExtraForNaturalWalls, true);
+            Scribe_Values.Look(ref costBlockedWallExtraPerHitPoint, "costBlockedWallExtraPerHitPoint", PathFinderCostTuning.Cost_BlockedWallExtraPerHitPoint, true);
+            Scribe_Values.Look(ref costBlockedWallBase, "costBlockedWallBase", PathFinderCostTuning.Cost_BlockedWallBase, true);
+            Scribe_Values.Look(ref costBlockedDoor, "costBlockedDoor", PathFinderCostTuning.Cost_BlockedDoor, true);
+            Scribe_Values.Look(ref costLOS, "costLOS", AVOID_DEFAULT_COST, true);
         }
     }
 
@@ -81,6 +103,16 @@ namespace PogoAI
                 listingStandard.CheckboxLabeled("Enable Combat Extended Compatibility Performance fix: \n(recommeded to leave on. Requires game restart.)",
                     ref settings.combatExtendedCompatPerf);
             }
+            listingStandard.Label("WARNING: Advanced settings, change at your own risk.\n " +
+                "NOTE: Any updates require a game restart.\n\n" +
+                "Pathfinding algorithm cell cost values:\n");
+            listingStandard.TextFieldNumericLabeled<int>($"Pawn/Turret LOS (additive on intersect) (def: {PogoSettings.AVOID_DEFAULT_COST})", ref settings.costLOS, ref settings.costLOSBuf);
+            listingStandard.TextFieldNumericLabeled<int>($"OffLordWalkGrid (def: {PathFinderCostTuning.Cost_OffLordWalkGrid})", ref settings.costOffLordWalkGrid, ref settings.costOffLordWalkGridBuf);
+            listingStandard.TextFieldNumericLabeled<float>($"BlockedDoorPerHitPoint (def: {PathFinderCostTuning.Cost_BlockedDoorPerHitPoint})", ref settings.costBlockedDoorPerHitPoint, ref settings.costBlockedDoorPerHitPointBuf);
+            listingStandard.TextFieldNumericLabeled<int>($"BlockedWallExtraForNaturalWalls (def: {PathFinderCostTuning.Cost_BlockedWallExtraForNaturalWalls})", ref settings.costBlockedWallExtraForNaturalWalls, ref settings.costBlockedWallExtraForNaturalWallsBuf);
+            listingStandard.TextFieldNumericLabeled<float>($"BlockedWallExtraPerHitPoint (def: {PathFinderCostTuning.Cost_BlockedWallExtraPerHitPoint})", ref settings.costBlockedWallExtraPerHitPoint, ref settings.costBlockedWallExtraPerHitPointBuf);
+            listingStandard.TextFieldNumericLabeled<int>($"BlockedWallBase (def: {PathFinderCostTuning.Cost_BlockedWallBase})", ref settings.costBlockedWallBase, ref settings.costBlockedWallBaseBuf);
+            listingStandard.TextFieldNumericLabeled<int>($"BlockedDoor (def: {PathFinderCostTuning.Cost_BlockedDoor})", ref settings.costBlockedDoor, ref settings.costBlockedDoorBuf);
             listingStandard.End();
             settings.Write();
         }
