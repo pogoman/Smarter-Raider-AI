@@ -16,7 +16,7 @@ namespace PogoAI.Patches
     {
         static bool Prefix(Pawn pawn, ref Job __result)
         {
-            if (pawn.mindState?.duty?.def != DutyDefOf.AssaultColony || pawn.Faction.def.techLevel < Init.settings.minSmartTechLevel
+            if (pawn.mindState?.duty?.def != DutyDefOf.AssaultColony || pawn.Faction.def.techLevel < Init.settings.minSmartTechLevel || !Init.settings.everyRaidSaps
                 || pawn.Map.attackTargetsCache.GetPotentialTargetsFor(pawn).Count(x => !x.ThreatDisabled(pawn) && !x.Thing.Destroyed && x.Thing.Faction == Faction.OfPlayer) == 0)
             {
                 return true;

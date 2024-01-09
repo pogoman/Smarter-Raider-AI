@@ -98,6 +98,7 @@ namespace PogoAI.Patches
             static void Postfix(Pawn pawn, ref bool __result)
             {
                 var lord = pawn.GetLord();
+                Log.Message($"result {__result} {lord.ownedPawns.Any(x => x.CurJob?.def == JobDefOf.UseVerbOnThing)}");
                 if (!__result && !lord.ownedPawns.Any(x => x.CurJob?.def == JobDefOf.UseVerbOnThing))
                 {
                     var data = LordDataFor(lord);
@@ -119,6 +120,21 @@ namespace PogoAI.Patches
 #endif
                     }
                     doneReset = true;
+                }
+            }
+        }
+
+        [HarmonyPatch(typeof(Verse.AI.BreachingGrid), "FindBuildingToBreach")]
+        static class BreachingUtility_FindBuildingToBreach
+        {
+            static void Postfix(ref Thing __result)
+            {
+                if (__result == null && !breachMineables)
+                {
+                    breachMineables = true;
+#if DEBUG
+                    Log.Message("Could not find breach building so breachMineables");
+#endif
                 }
             }
         }

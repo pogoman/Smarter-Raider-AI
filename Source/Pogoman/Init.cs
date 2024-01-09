@@ -16,6 +16,7 @@ namespace PogoAI
         public const string DEFAULT_BREACH_WEAPONS = "stickbomb, concussion, doom, triple, inferno, chargeblast, thermal, thump, cannon";
         public const int AVOID_DEFAULT_COST = 45;
 
+        public bool everyRaidSaps = true;
         public int maxSappers = 20;
         public string breachWeapons = DEFAULT_BREACH_WEAPONS;
         public bool combatExtendedCompatPerf = true;
@@ -38,6 +39,7 @@ namespace PogoAI
         public override void ExposeData()
         {
             base.ExposeData();
+            Scribe_Values.Look(ref everyRaidSaps, "everyRaidSaps", true, true);
             Scribe_Values.Look(ref breachWeapons, "breachWeapons", DEFAULT_BREACH_WEAPONS, true);
             Scribe_Values.Look(ref combatExtendedCompatPerf, "combatExtendedCompatPerf", true, true);
             Scribe_Values.Look(ref maxSappers, "maxSappers", 20, true);
@@ -82,9 +84,10 @@ namespace PogoAI
             base.DoSettingsWindowContents(inRect);
             Listing_Standard listingStandard = new Listing_Standard();
             listingStandard.Begin(inRect);    
+            listingStandard.CheckboxLabeled("Every raid can sap/dig:", ref settings.everyRaidSaps);
+            listingStandard.SliderLabeled("Maximum number of sappers per raid:\n(Higher numbers may affect performance)", ref settings.maxSappers, "{0}/50", 1, 50);
             listingStandard.AddLabeledTextField("Allowed Breach Weapons:\n(comma separated, case insensitive, partial match, no spaces)", ref settings.breachWeapons, 0.25f, 80);
-            listingStandard.SliderLabeled("Maximum number of sappers per raid:\n(Higher numbers may affect performance)\n", ref settings.maxSappers, "{0}/50", 1, 50);
-            if (listingStandard.ButtonTextLabeled("Minimum Smart Raid Tech Level:\n(tech levels that use the avoid grid)\n", settings.minSmartTechLevel.ToString(), TextAnchor.UpperLeft, (string)null, (string)null))
+            if (listingStandard.ButtonTextLabeled("Minimum Smart Raid Tech Level:\n(tech levels that use the avoid grid)", settings.minSmartTechLevel.ToString(), TextAnchor.UpperLeft, (string)null, (string)null))
             {
                 List<FloatMenuOption> floatMenuOptionList = new List<FloatMenuOption>();
                 floatMenuOptionList.Add(new FloatMenuOption("Neolithic", (Action)(() => settings.minSmartTechLevel = TechLevel.Neolithic), (MenuOptionPriority)4, (Action<Rect>)null, (Thing)null, 0.0f, (Func<Rect, bool>)null, (WorldObject)null, true, 0));
