@@ -13,7 +13,7 @@ namespace PogoAI.Patches
             static void Postfix(ref RimWorld.LordJob_AssaultColony __instance)
             {
                 var instance = Traverse.Create(__instance);
-                if (instance.Field("assaulterFaction").Property("def").Property("techLevel").GetValue<TechLevel>() >= Init.settings.minSmartTechLevel)
+                if (instance.Field("assaulterFaction").GetValue<Faction>().def.techLevel >= Init.settings.minSmartTechLevel)
                 {
                     instance.Field("breachers").SetValue(true);
                     instance.Field("useAvoidGridSmart").SetValue(!Init.combatAi);
