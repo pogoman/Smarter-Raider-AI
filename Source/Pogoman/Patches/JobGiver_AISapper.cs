@@ -8,6 +8,7 @@ using Verse.AI.Group;
 using Unity.Jobs;
 using static UnityEngine.GraphicsBuffer;
 using Steamworks;
+using static PogoAI.Patches.JobGiver_AISapper;
 
 namespace PogoAI.Patches
 {
@@ -58,6 +59,8 @@ namespace PogoAI.Patches
             }
 
         }
+
+        public static PathFinderCostTuning customTuning = new PathFinderCostTuning();
 
         public static List<CachedPath> pathCostCache = new List<CachedPath>();
 
@@ -126,8 +129,9 @@ namespace PogoAI.Patches
                     
                 if (findNewPaths && memoryValue == null && pathCostCache.Count <= Init.settings.maxSappers)
                 {
+                    customTuning.custom = new CustomTuning(pawn);
                     using (PawnPath pawnPath = pawn.Map.pathFinder.FindPath(pawn.Position, intVec,
-                        TraverseParms.For(pawn, Danger.None, TraverseMode.PassAllDestroyableThings, false, true, false), PathEndMode.OnCell))
+                        TraverseParms.For(pawn, Danger.None, TraverseMode.PassAllDestroyableThings, false, true, false), PathEndMode.OnCell, customTuning))
                     {
                         var nodes = Traverse.Create(pawnPath).Field("nodes").GetValue<List<IntVec3>>();
                         IntVec3 cellBeforeBlocker = IntVec3.Invalid;
