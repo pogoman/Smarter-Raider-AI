@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using HarmonyLib;
 using PogoAI.Extensions;
 using RimWorld;
@@ -21,17 +22,6 @@ namespace PogoAI
         public string breachWeapons = DEFAULT_BREACH_WEAPONS;
         public bool combatExtendedCompatPerf = true;
         public TechLevel minSmartTechLevel = TechLevel.Neolithic;
-        public int costOffLordWalkGrid = PathFinderCostTuning.Cost_OffLordWalkGrid;
-        public string costOffLordWalkGridBuf;
-        public float costBlockedDoorPerHitPoint = PathFinderCostTuning.Cost_BlockedDoorPerHitPoint;
-        public string costBlockedDoorPerHitPointBuf;
-        public int costBlockedWallExtraForNaturalWalls = PathFinderCostTuning.Cost_BlockedWallExtraForNaturalWalls;
-        public string costBlockedWallExtraForNaturalWallsBuf;
-        public float costBlockedWallExtraPerHitPoint = PathFinderCostTuning.Cost_BlockedWallExtraPerHitPoint;
-        public string costBlockedWallExtraPerHitPointBuf;
-        public int costBlockedWallBase = PathFinderCostTuning.Cost_BlockedWallBase;
-        public string costBlockedWallBaseBuf;
-        public int costBlockedDoor = PathFinderCostTuning.Cost_BlockedDoor;
         public string costBlockedDoorBuf;
         public int costLOS = AVOID_DEFAULT_COST;
         public string costLOSBuf;
@@ -44,12 +34,6 @@ namespace PogoAI
             Scribe_Values.Look(ref combatExtendedCompatPerf, "combatExtendedCompatPerf", true, true);
             Scribe_Values.Look(ref maxSappers, "maxSappers", 20, true);
             Scribe_Values.Look<TechLevel>(ref minSmartTechLevel, "minSmartTechLevel", TechLevel.Neolithic, true);
-            Scribe_Values.Look(ref costOffLordWalkGrid, "costOffLordWalkGrid", PathFinderCostTuning.Cost_OffLordWalkGrid, true);
-            Scribe_Values.Look(ref costBlockedDoorPerHitPoint, "costBlockedDoorPerHitPoint", PathFinderCostTuning.Cost_BlockedDoorPerHitPoint, true);
-            Scribe_Values.Look(ref costBlockedWallExtraForNaturalWalls, "costBlockedWallExtraForNaturalWalls", PathFinderCostTuning.Cost_BlockedWallExtraForNaturalWalls, true);
-            Scribe_Values.Look(ref costBlockedWallExtraPerHitPoint, "costBlockedWallExtraPerHitPoint", PathFinderCostTuning.Cost_BlockedWallExtraPerHitPoint, true);
-            Scribe_Values.Look(ref costBlockedWallBase, "costBlockedWallBase", PathFinderCostTuning.Cost_BlockedWallBase, true);
-            Scribe_Values.Look(ref costBlockedDoor, "costBlockedDoor", PathFinderCostTuning.Cost_BlockedDoor, true);
             Scribe_Values.Look(ref costLOS, "costLOS", AVOID_DEFAULT_COST, true);
         }
     }
@@ -59,12 +43,12 @@ namespace PogoAI
         public static PogoSettings settings;
         public static bool combatExtended = false;
         public static bool combatAi = false;
-        public static Harmony harm;
+        public static Harmony harmony;
 
         public Init(ModContentPack contentPack) : base(contentPack)
         {
             Log.Message("Smarter Raider AI Initialising...");
-            harm  = new Harmony("pogo.ai");
+            harmony  = new Harmony("pogo.ai");
             combatExtended = LoadedModManager.RunningMods.FirstOrDefault(m => m.PackageId.Matches("CETeam.CombatExtended")) != null;
             if (combatExtended)
             {
@@ -76,7 +60,65 @@ namespace PogoAI
                 Log.Message("SRAI: CAI detected");
             }
             settings = GetSettings<PogoSettings>();
-            harm.PatchAll();
+            harmony.PatchAll();
+            patchPrivateClass(typeof(BreachingUtility), typeof(Patches.BreachingUtility.BreachRangedCastPositionFinder_TryFindRangedCastPosition), "RimWorld.BreachingUtility+BreachRangedCastPositionFinder", "TryFindRangedCastPosition", "Postfix");
+            patchPrivateClass(typeof(BreachingUtility), typeof(Patches.BreachingUtility.BreachRangedCastPositionFinder_SafeForRangedCast), "RimWorld.BreachingUtility+BreachRangedCastPositionFinder", "SafeForRangedCast", "Prefix");
+            patchPrivateMethod(typeof(RimWorld.JobGiver_AIFightEnemy), typeof(Patches.JobGiver_AIFightEnemy.JobGiver_AIFightEnemy_TryGiveJob), "TryGiveJob", "Prefix");
+            patchPrivateMethod(typeof(RimWorld.JobGiver_AIFightEnemy), typeof(Patches.JobGiver_AIFightEnemy.JobGiver_AIFightEnemy_TryGiveJob), "TryGiveJob", "Postfix");
+        }
+
+        private void patchPrivateMethod(Type classType, Type myClass, string methodName, string harmonyMethod)
+        {
+            // Access the private method
+            var methodToPatch = classType.GetMethod(methodName, BindingFlags.NonPublic | BindingFlags.Instance);
+            if (methodToPatch == null)
+            {
+                // Handle the error if the method is not found
+                throw new InvalidOperationException($"Method '{methodName}' not found.");
+            }
+
+            // Apply the patch
+            if (harmonyMethod == "Prefix")
+            {
+                var prefix = new HarmonyMethod(myClass.GetMethod(harmonyMethod, BindingFlags.Static | BindingFlags.NonPublic));
+                harmony.Patch(methodToPatch, prefix, null);
+            }
+            else
+            {
+                var postfix = new HarmonyMethod(myClass.GetMethod(harmonyMethod, BindingFlags.Static | BindingFlags.NonPublic));
+                harmony.Patch(methodToPatch, null, postfix);
+            }
+        }
+
+        private void patchPrivateClass(Type parentClass, Type myClass, string privateClassName, string methodName, string harmonyMethod)
+        {
+            // Access the private class
+            var targetType = parentClass.Assembly.GetType(privateClassName);
+            if (targetType == null)
+            {
+                // Handle the error if the class is not found
+                throw new InvalidOperationException($"Private class '{privateClassName}' not found.");
+            }
+
+            // Access the private method
+            var methodToPatch = targetType.GetMethod(methodName, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+            if (methodToPatch == null)
+            {
+                // Handle the error if the method is not found
+                throw new InvalidOperationException($"Method '{methodName}' not found.");
+            }
+
+            // Apply the patch
+            if (harmonyMethod == "Prefix")
+            {
+                var prefix = new HarmonyMethod(myClass.GetMethod(harmonyMethod, BindingFlags.Static | BindingFlags.NonPublic));
+                harmony.Patch(methodToPatch, prefix, null);
+            }
+            else
+            {
+                var postfix = new HarmonyMethod(myClass.GetMethod(harmonyMethod, BindingFlags.Static | BindingFlags.NonPublic));
+                harmony.Patch(methodToPatch, null, postfix);
+            }
         }
 
         public override void DoSettingsWindowContents(Rect inRect)
@@ -85,7 +127,7 @@ namespace PogoAI
             Listing_Standard listingStandard = new Listing_Standard();
             listingStandard.Begin(inRect);    
             listingStandard.CheckboxLabeled("Every raid can sap/dig:", ref settings.everyRaidSaps);
-            listingStandard.SliderLabeled("Maximum number of sappers per raid:\n(Higher numbers may affect performance)", ref settings.maxSappers, "{0}/50", 1, 50);
+            listingStandard.SliderLabeled("Maximum number of sappers per raid:\n(Higher numbers may affect performance)", settings.maxSappers, 1, 50);
             listingStandard.AddLabeledTextField("Allowed Breach Weapons:\n(comma separated, case insensitive, partial match, no spaces)", ref settings.breachWeapons, 0.25f, 80);
             if (listingStandard.ButtonTextLabeled("Minimum Smart Raid Tech Level:\n(tech levels that use the avoid grid)", settings.minSmartTechLevel.ToString(), TextAnchor.UpperLeft, (string)null, (string)null))
             {
@@ -108,12 +150,6 @@ namespace PogoAI
             }
             listingStandard.Label("WARNING: Advanced settings below, change at your own risk. Any updates require a game restart.\n\nPathfinding algorithm cell cost values:\n");
             listingStandard.TextFieldNumericLabeled<int>($"Pawn/Turret LOS (additive on intersect) (def: {PogoSettings.AVOID_DEFAULT_COST})", ref settings.costLOS, ref settings.costLOSBuf);
-            listingStandard.TextFieldNumericLabeled<int>($"OffLordWalkGrid (def: {PathFinderCostTuning.Cost_OffLordWalkGrid})", ref settings.costOffLordWalkGrid, ref settings.costOffLordWalkGridBuf);
-            listingStandard.TextFieldNumericLabeled<float>($"BlockedDoorPerHitPoint (def: {PathFinderCostTuning.Cost_BlockedDoorPerHitPoint})", ref settings.costBlockedDoorPerHitPoint, ref settings.costBlockedDoorPerHitPointBuf);
-            listingStandard.TextFieldNumericLabeled<int>($"BlockedWallExtraForNaturalWalls (def: {PathFinderCostTuning.Cost_BlockedWallExtraForNaturalWalls})", ref settings.costBlockedWallExtraForNaturalWalls, ref settings.costBlockedWallExtraForNaturalWallsBuf);
-            listingStandard.TextFieldNumericLabeled<float>($"BlockedWallExtraPerHitPoint (def: {PathFinderCostTuning.Cost_BlockedWallExtraPerHitPoint})", ref settings.costBlockedWallExtraPerHitPoint, ref settings.costBlockedWallExtraPerHitPointBuf);
-            listingStandard.TextFieldNumericLabeled<int>($"BlockedWallBase (def: {PathFinderCostTuning.Cost_BlockedWallBase})", ref settings.costBlockedWallBase, ref settings.costBlockedWallBaseBuf);
-            listingStandard.TextFieldNumericLabeled<int>($"BlockedDoor (def: {PathFinderCostTuning.Cost_BlockedDoor})", ref settings.costBlockedDoor, ref settings.costBlockedDoorBuf);
             listingStandard.End();
             settings.Write();
         }

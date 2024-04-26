@@ -5,6 +5,7 @@ using Verse.AI;
 using Verse;
 using PogoAI.Extensions;
 using PogoAI.Patches;
+using HarmonyLib;
 
 namespace PogoAI
 {
@@ -55,7 +56,7 @@ namespace PogoAI
                         using (PawnPath pawnPath = pawn.Map.pathFinder.FindPath(pawn.Position, edifice,
                             TraverseParms.For(pawn, Danger.Deadly, TraverseMode.ByPawn, false, false, false), PathEndMode.Touch, null))
                         {
-                            if (pawnPath == PawnPath.NotFound || pawnPath.nodes.Any(x => PawnUtility.AnyPawnBlockingPathAt(x, pawn, true, false, false)))
+                            if (pawnPath == PawnPath.NotFound || Traverse.Create(pawnPath).Field("nodes").GetValue<List<IntVec3>>().Any(x => PawnUtility.AnyPawnBlockingPathAt(x, pawn, true, false, false)))
                             {
                                 continue;
                             }

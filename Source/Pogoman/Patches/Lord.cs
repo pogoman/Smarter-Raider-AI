@@ -17,7 +17,7 @@ namespace PogoAI.Patches
         {
             if ((Find.TickManager.TicksGame - lastUpdateTicks) / 60 > 5)
             {
-                __instance.Map.avoidGrid.gridDirty = true;
+                Traverse.Create(__instance.Map.avoidGrid).Field("gridDirty").SetValue(true);
                 lastUpdateTicks = Find.TickManager.TicksGame;
             }
         }

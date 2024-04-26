@@ -20,7 +20,7 @@ namespace PogoAI.Patches
     [HarmonyPatch(typeof(AvoidGrid), "Regenerate")]
     public static class AvoidGrid_Regenerate
     {
-        static AvoidGrid instance;
+        static Traverse instance;
         static int counter = 0;
         static ByteGrid tempGrid;
         public static int lastUpdateTicks = 0;
@@ -28,16 +28,17 @@ namespace PogoAI.Patches
 
         static bool Prefix(Verse.AI.AvoidGrid __instance)
         {
+            instance = Traverse.Create(__instance);
             //No need to update that frequently
+            var gridDirty = instance.Field("gridDirty");
             if (lastUpdateTicks != 0 && (Find.TickManager.TicksGame - lastUpdateTicks) / 60 < 5)
             {
-                __instance.gridDirty = false;
+                gridDirty.SetValue(false);
                 return false;
             }
 
-            instance = __instance;
-            __instance.gridDirty = false;
-            __instance.grid.Clear(0);
+            gridDirty.SetValue(false);
+            __instance.Grid.Clear(0);
             counter = 0;
 
             try
@@ -99,9 +100,9 @@ namespace PogoAI.Patches
                             Building_TurretGun building_TurretGun = allBuildingsColonist[i] as Building_TurretGun;
                             equip = building_TurretGun.GunCompEq;
                             threatCondition = equip != null && (building_TurretGun.Active
-                                || (building_TurretGun.PowerComp?.PowerNet?.CanPowerNow(building_TurretGun.powerComp) ?? false))
+                                || (building_TurretGun.PowerComp?.PowerNet?.CanPowerNow(Traverse.Create(building_TurretGun).Field("powerComp").GetValue<CompPowerTrader>()) ?? false))
                                 && building_TurretGun.TargetCurrentlyAimingAt == null
-                                && (!runMannableCheck || !building_TurretGun.IsMannable || building_TurretGun.MannedByColonist)
+                                && (!runMannableCheck || !building_TurretGun.IsMannable || Traverse.Create(building_TurretGun).Field("MannedByColonist").GetValue<bool>())
                                 && (building_TurretGun.refuelableComp?.HasFuel ?? true);
                         }
                         if (threatCondition)
@@ -110,7 +111,7 @@ namespace PogoAI.Patches
                         }
                     }
                 }
-                __instance.ExpandAvoidGridIntoEdifices();
+                instance.Method("ExpandAvoidGridIntoEdifices").GetValue();
                 //Log.Message($"Count: {counter}");
 
             }
@@ -149,7 +150,7 @@ namespace PogoAI.Patches
         {
             if (tempGrid[cell] == 0)
             {
-                instance.IncrementAvoidGrid(cell, Init.settings.costLOS);
+                instance.Method("IncrementAvoidGrid", cell, Init.settings.costLOS).GetValue();
                 IncrementLocalAvoidGrid(tempGrid, cell, Init.settings.costLOS);
             }
             return true;
@@ -172,9 +173,9 @@ namespace PogoAI.Patches
             {
                 IntVec3 intVec = pos + GenRadial.RadialPattern[i];
                 if (intVec.InBounds(map) && intVec.WalkableByNormal(map)
-                    && __instance.grid[intVec] == 0)
+                    && __instance.Grid[intVec] == 0)
                 {
-                    __instance.IncrementAvoidGrid(intVec, incAmount);
+                    Traverse.Create(__instance).Method("IncrementAvoidGrid", intVec, incAmount).GetValue();
                 }
             }
         }
