@@ -3,6 +3,7 @@ using Mono.Unix.Native;
 using PogoAI.Extensions;
 using RimWorld;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using Verse;
@@ -18,30 +19,31 @@ namespace PogoAI.Patches
         public static bool enforceMinimumRange = true;
         public static bool doneReset = false;
 
-        [HarmonyPatch(typeof(BreachRangedCastPositionFinder), "SafeForRangedCast")]
-        static class BreachRangedCastPositionFinder_SafeForRangedCast
+        public static class BreachRangedCastPositionFinder_SafeForRangedCast
         {
             //Everything here needs to be efficient, called 100000s times
-            static bool Prefix(IntVec3 c, ref bool __result, BreachRangedCastPositionFinder __instance)
+            static bool Prefix(IntVec3 c, ref bool __result, object __instance)
             {
-                var map = __instance.breachingGrid.map;
+                var instance = Traverse.Create(__instance);
+                var verb = instance.Field("verb").GetValue<Verb>();
+                var map = instance.Field("breachingGrid").GetValue<BreachingGrid>().Map;
                 if (!c.InBounds(map) || !c.Walkable(map))
                 { 
                     __result = false;
                     return false;
                 }
                 __result = true;
-                if (__instance.verb == null)
+                if (verb == null)
                 {
                     return false;
                 }
 
                 //Check weapon min range in case of splash (cheaper than original code)
-                ThingDef projectile = __instance.verb.GetProjectile();
+                ThingDef projectile = verb.GetProjectile();
                 float modifier = 10;
                 if (projectile != null && projectile.projectile.explosionRadius > 0f)
                 {
-                    if (__instance.verb.EquipmentCompSource?.parent?.def.thingCategories.FirstOrDefault()?.defName == "Grenades")
+                    if (verb.EquipmentCompSource?.parent?.def.thingCategories.FirstOrDefault()?.defName == "Grenades")
                     {
                         modifier = 1.5f;
                     }
@@ -50,20 +52,22 @@ namespace PogoAI.Patches
                         modifier = 5;
                     }
                 }
-                var effective = __instance.verb.EffectiveRange * __instance.verb.EffectiveRange / modifier;
-                __result = !enforceMinimumRange || __instance.target.Position.DistanceToSquared(c) > effective;
+                var target = instance.Field("target").GetValue<Thing>();
+                var effective = verb.EffectiveRange * verb.EffectiveRange / modifier;
+                __result = !enforceMinimumRange || target.Position.DistanceToSquared(c) > effective;
 
                 //Check for nearby reserved firingpos in case of FF in CE (mainly a problem for cents)
-                if (__result && __instance.verb.EffectiveRange > 30)
+                if (__result && verb.EffectiveRange > 30)
                 {
-                    if (map.pawnDestinationReservationManager.reservedDestinations.ContainsKey(__instance.verb.Caster.Faction))
+                    var reservedDestinations = Traverse.Create(map.pawnDestinationReservationManager).Field("reservedDestinations").GetValue<Dictionary<Faction, PawnDestinationReservationManager.PawnDestinationSet>>();
+                    if (reservedDestinations.ContainsKey(verb.Caster.Faction))
                     {
-                        var reservations = map.pawnDestinationReservationManager.reservedDestinations[__instance.verb.Caster.Faction]
-                           .list.Where(x => x.job?.def == JobDefOf.UseVerbOnThing && x.claimant.GetLord() == ((Pawn)__instance.verb.Caster).GetLord());
+                        var reservations = reservedDestinations[verb.Caster.Faction]
+                           .list.Where(x => x.job?.def == JobDefOf.UseVerbOnThing && x.claimant.GetLord() == ((Pawn)verb.Caster).GetLord());
                         foreach (var reservation in reservations)
                         {
                             var num = (float)(c - reservation.target).LengthHorizontalSquared;
-                            if ((projectile.projectile.explosionRadius == 0f || num < 100f) && PointsCollinear(c, reservation.target, __instance.target.Position, 1))
+                            if ((projectile.projectile.explosionRadius == 0f || num < 100f) && PointsCollinear(c, reservation.target, target.Position, 1))
                             {
                                 __result = false;
                                 break;
@@ -92,8 +96,7 @@ namespace PogoAI.Patches
 
         }
 
-        [HarmonyPatch(typeof(BreachRangedCastPositionFinder), "TryFindRangedCastPosition")]
-        static class BreachRangedCastPositionFinder_TryFindRangedCastPosition
+        public static class BreachRangedCastPositionFinder_TryFindRangedCastPosition
         {
             static void Postfix(Pawn pawn, ref bool __result)
             {

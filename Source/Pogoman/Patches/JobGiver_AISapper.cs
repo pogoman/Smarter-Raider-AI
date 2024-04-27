@@ -8,6 +8,7 @@ using Verse.AI.Group;
 using Unity.Jobs;
 using static UnityEngine.GraphicsBuffer;
 using Steamworks;
+using static PogoAI.Patches.JobGiver_AISapper;
 
 namespace PogoAI.Patches
 {
@@ -59,15 +60,7 @@ namespace PogoAI.Patches
 
         }
 
-        public static PathFinderCostTuning customTuning = new PathFinderCostTuning() 
-        {
-            costOffLordWalkGrid = Init.settings.costOffLordWalkGrid,
-            costBlockedDoorPerHitPoint = Init.settings.costBlockedDoorPerHitPoint,
-            costBlockedWallExtraForNaturalWalls = Init.settings.costBlockedWallExtraForNaturalWalls,
-            costBlockedWallExtraPerHitPoint = Init.settings.costBlockedWallExtraPerHitPoint,
-            costBlockedWallBase = Init.settings.costBlockedWallBase,
-            costBlockedDoor = Init.settings.costBlockedDoor
-        };
+        public static PathFinderCostTuning customTuning = new PathFinderCostTuning();
 
         public static List<CachedPath> pathCostCache = new List<CachedPath>();
 
@@ -140,16 +133,17 @@ namespace PogoAI.Patches
                     using (PawnPath pawnPath = pawn.Map.pathFinder.FindPath(pawn.Position, intVec,
                         TraverseParms.For(pawn, Danger.None, TraverseMode.PassAllDestroyableThings, false, true, false), PathEndMode.OnCell, customTuning))
                     {
+                        var nodes = Traverse.Create(pawnPath).Field("nodes").GetValue<List<IntVec3>>();
                         IntVec3 cellBeforeBlocker = IntVec3.Invalid;
                         IntVec3 cellAfterBlocker = IntVec3.Invalid;
                         if (pawnPath != PawnPath.NotFound)
                         {
                             Thing blockingThing = pawnPath.FirstBlockingBuilding(out cellBeforeBlocker, pawn);
-                            if (blockingThing == null && pawnPath.nodes.Count > 1)
+                            if (blockingThing == null && nodes.Count > 1)
                             {
-                                cellBeforeBlocker = pawnPath.nodes[1];
+                                cellBeforeBlocker = nodes[1];
 #if DEBUG
-                                Log.Message($"{pawn} targ: {attackTarget} no blocker {cellBeforeBlocker} Cost: {pawnPath.TotalCost} Length: {pawnPath.nodes.Count}");
+                                Log.Message($"{pawn} targ: {attackTarget} no blocker {cellBeforeBlocker} Cost: {pawnPath.TotalCost} Length: {nodes.Count}");
 #endif
                             }
                             else
@@ -158,7 +152,7 @@ namespace PogoAI.Patches
 #if DEBUG
                                 Find.CurrentMap.debugDrawer.FlashCell(blockingThing.Position, 1f, $"b{pawnPath.TotalCost}", 300);
                                 Log.Message($"{pawn} targ: {attackTarget} blocked {blockingThing} cb: {cellBeforeBlocker} ca: {cellAfterBlocker} " +
-                                    $"reg: {Utilities.CellBlockedFor(pawn, blockingThing.Position)} Cost: {pawnPath.TotalCost} Length: {pawnPath.nodes.Count}");
+                                    $"reg: {Utilities.CellBlockedFor(pawn, blockingThing.Position)} Cost: {pawnPath.TotalCost} Length: {nodes.Count}");
 #endif
                             }
                             memoryValue = new CachedPath(pawn, attackTarget, blockingThing, cellBeforeBlocker, cellAfterBlocker);

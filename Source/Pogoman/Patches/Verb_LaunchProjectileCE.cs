@@ -51,7 +51,7 @@ namespace PogoAI.Patches
                 }
 
                 var original = typeof(Verb).GetMethod("TryFindShootLineFromTo");
-                Init.harm.Unpatch(original, HarmonyPatchType.Prefix, "CombatExtended.HarmonyCE");
+                Init.harmony.Unpatch(original, HarmonyPatchType.Prefix, "CombatExtended.HarmonyCE");
 
                 return true;
             }

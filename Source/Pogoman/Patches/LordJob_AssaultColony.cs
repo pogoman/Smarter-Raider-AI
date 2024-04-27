@@ -12,10 +12,11 @@ namespace PogoAI.Patches
         {
             static void Postfix(ref RimWorld.LordJob_AssaultColony __instance)
             {
-                if (__instance.assaulterFaction.def.techLevel >= Init.settings.minSmartTechLevel)
+                var instance = Traverse.Create(__instance);
+                if (instance.Field("assaulterFaction").GetValue<Faction>().def.techLevel >= Init.settings.minSmartTechLevel)
                 {
-                    __instance.breachers = true;
-                    __instance.useAvoidGridSmart = !Init.combatAi;
+                    instance.Field("breachers").SetValue(true);
+                    instance.Field("useAvoidGridSmart").SetValue(!Init.combatAi);
                 }
                 BreachingUtility.breachMineables = false;
                 BreachingUtility.enforceMinimumRange = true;

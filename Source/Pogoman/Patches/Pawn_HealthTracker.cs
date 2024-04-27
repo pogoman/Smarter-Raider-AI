@@ -17,21 +17,22 @@ namespace PogoAI.Patches
 
         public static void GridOnDeath(Pawn_HealthTracker __instance)
         {
-            if (__instance.pawn != null && __instance.pawn.Position.IsValid && __instance.pawn.Faction.HostileTo(Faction.OfPlayer) && __instance.pawn.Faction != Faction.OfInsects)
+            var pawn = Traverse.Create(__instance).Field("pawn").GetValue() as Pawn;
+            if (pawn != null && pawn.Position.IsValid && pawn.Faction.HostileTo(Faction.OfPlayer) && pawn.Faction != Faction.OfInsects)
             {
-                var avoidGrid = __instance.pawn.Map.avoidGrid;
-                if (avoidGrid?.grid != null)
+                var avoidGrid = pawn.Map.avoidGrid;
+                if (avoidGrid?.Grid != null)
                 {
-                    var clearPaths = avoidGrid.grid[__instance.pawn.Position] == 0;
-                    AvoidGrid_Regenerate.PrintAvoidGridAroundPos(__instance.pawn.Map.avoidGrid, __instance.pawn.Map, __instance.pawn.Position, 1, 1000);
-                    if (__instance.pawn.mindState.enemyTarget != null)
+                    var clearPaths = avoidGrid.Grid[pawn.Position] == 0;
+                    AvoidGrid_Regenerate.PrintAvoidGridAroundPos(pawn.Map.avoidGrid, pawn.Map, pawn.Position, 1, 1000);
+                    if (pawn.mindState.enemyTarget != null)
                     {
-                        AvoidGrid_Regenerate.PrintAvoidGridAroundPos(__instance.pawn.Map.avoidGrid, __instance.pawn.Map, __instance.pawn.mindState.enemyTarget.Position, 1, 1000);
+                        AvoidGrid_Regenerate.PrintAvoidGridAroundPos(pawn.Map.avoidGrid, pawn.Map, pawn.mindState.enemyTarget.Position, 1, 1000);
                     }
-                    if (clearPaths && Utilities.GetNearestThingDesignationDef(__instance.pawn, DesignationCategoryDefOf.Structure, 1) != null)
+                    if (clearPaths && Utilities.GetNearestThingDesignationDef(pawn, DesignationCategoryDefOf.Production, 1) != null)
                     {
 #if DEBUG
-                    Log.Message($"{__instance.pawn} died in near base, clearing cache...");
+                    Log.Message($"{pawn} died in near base, clearing cache...");
 #endif
                         JobGiver_AISapper.pathCostCache.Clear();
                         JobGiver_AISapper.findNewPaths = true;

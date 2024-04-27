@@ -20,7 +20,7 @@ namespace PogoAI.Patches
             {
                 if (pawn.Drafted)
                 {
-                    pawn.Map.avoidGrid.gridDirty = true;
+                    Traverse.Create(pawn.Map.avoidGrid).Field("gridDirty").SetValue(true);
                 }
             }
         }
