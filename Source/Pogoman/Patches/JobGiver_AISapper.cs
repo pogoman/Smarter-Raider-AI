@@ -9,6 +9,7 @@ using Unity.Jobs;
 using static UnityEngine.GraphicsBuffer;
 using Steamworks;
 using static PogoAI.Patches.JobGiver_AISapper;
+using System;
 
 namespace PogoAI.Patches
 {
@@ -110,10 +111,11 @@ namespace PogoAI.Patches
   
                 if (memoryValue == null)
                 {
-                    var attackTargets = pawn.Map.attackTargetsCache.GetPotentialTargetsFor(pawn)
-                        .Where(x => !x.ThreatDisabled(pawn) && !x.Thing.Destroyed && x.Thing.Faction == Faction.OfPlayer && !pathCostCache.Any(y => y.pawn == x.Thing));
+                    float num = float.MaxValue;
+                    attackTarget = pawn.Map.attackTargetsCache.GetPotentialTargetsFor(pawn)
+                        .Where(x => !x.ThreatDisabled(pawn) && !x.Thing.Destroyed && x.Thing.Faction == Faction.OfPlayer && !pathCostCache.Any(y => y.pawn == x.Thing))
+                        .OrderBy(x => ((Thing)x).Position.DistanceToSquared(pawn.Position)).FirstOrDefault();
 
-                    attackTarget = attackTargets.RandomElement();
                     if (attackTarget == null)
                     {
                         findNewPaths = false;
@@ -141,10 +143,29 @@ namespace PogoAI.Patches
                             Thing blockingThing = pawnPath.FirstBlockingBuilding(out cellBeforeBlocker, pawn);
                             if (blockingThing == null && nodes.Count > 1)
                             {
-                                cellBeforeBlocker = nodes[1];
+                                if (!attackTarget.ThreatDisabled((IAttackTargetSearcher)pawn) && AttackTargetFinder.IsAutoTargetable(attackTarget) 
+                                    && (!(attackTarget.Thing is Pawn thing) || thing.IsCombatant() || GenSight.LineOfSightToThing(pawn.Position, (Thing)thing, pawn.Map)))
+                                {
+                                    Thing dest = (Thing)attackTarget;
+                                    int squared = dest.Position.DistanceToSquared(pawn.Position);
+                                    if (pawn.CanReach((LocalTargetInfo)dest, PathEndMode.OnCell, Danger.Deadly))
+                                    {
+                                        Find.CurrentMap.debugDrawer.FlashCell(dest.Position, 1f, $"ENGAGE", 300);
+                                        Log.Message($"{pawn} targ: {attackTarget} engaging from loc {dest.Position}");
+                                        __result = JobMaker.MakeJob(JobDefOf.Goto, (LocalTargetInfo)dest);
+                                        __result.collideWithPawns = true;
+                                        __result.expiryInterval = 500;
+                                        __result.checkOverrideOnExpire = true;
+                                        __result.expireRequiresEnemiesNearby = false;
+                                        return false;
+                                    }
+                                } else
+                                {
+                                    cellBeforeBlocker = nodes[1];
 #if DEBUG
-                                Log.Message($"{pawn} targ: {attackTarget} no blocker {cellBeforeBlocker} Cost: {pawnPath.TotalCost} Length: {nodes.Count}");
+                                    Log.Message($"{pawn} targ: {attackTarget} no blocker {cellBeforeBlocker} Cost: {pawnPath.TotalCost} Length: {nodes.Count}");
 #endif
+                                }
                             }
                             else
                             {
