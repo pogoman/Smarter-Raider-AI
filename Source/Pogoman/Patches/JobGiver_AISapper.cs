@@ -111,7 +111,6 @@ namespace PogoAI.Patches
   
                 if (memoryValue == null)
                 {
-                    float num = float.MaxValue;
                     attackTarget = pawn.Map.attackTargetsCache.GetPotentialTargetsFor(pawn)
                         .Where(x => !x.ThreatDisabled(pawn) && !x.Thing.Destroyed && x.Thing.Faction == Faction.OfPlayer && !pathCostCache.Any(y => y.pawn == x.Thing))
                         .OrderBy(x => ((Thing)x).Position.DistanceToSquared(pawn.Position)).FirstOrDefault();
@@ -150,8 +149,10 @@ namespace PogoAI.Patches
                                     int squared = dest.Position.DistanceToSquared(pawn.Position);
                                     if (pawn.CanReach((LocalTargetInfo)dest, PathEndMode.OnCell, Danger.Deadly))
                                     {
+#if DEBUG
                                         Find.CurrentMap.debugDrawer.FlashCell(dest.Position, 1f, $"ENGAGE", 300);
                                         Log.Message($"{pawn} targ: {attackTarget} engaging from loc {dest.Position}");
+#endif
                                         __result = JobMaker.MakeJob(JobDefOf.Goto, (LocalTargetInfo)dest);
                                         __result.collideWithPawns = true;
                                         __result.expiryInterval = 500;
