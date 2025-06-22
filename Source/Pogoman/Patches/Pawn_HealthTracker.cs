@@ -3,6 +3,7 @@ using RimWorld;
 using Verse.AI;
 using Verse;
 using System.Linq;
+using Verse.Noise;
 
 namespace PogoAI.Patches
 { 
@@ -23,7 +24,7 @@ namespace PogoAI.Patches
                 var avoidGrid = pawn.Map.avoidGrid;
                 if (avoidGrid?.Grid != null)
                 {
-                    var clearPaths = avoidGrid.Grid[pawn.Position] == 0;
+                    var clearPaths = avoidGrid.Grid[pawn.Map.cellIndices.CellToIndex(pawn.Position)] == 0;
                     AvoidGrid_Regenerate.PrintAvoidGridAroundPos(pawn.Map.avoidGrid, pawn.Map, pawn.Position, 1, 1000);
                     if (pawn.mindState.enemyTarget != null)
                     {

@@ -7,9 +7,10 @@ using Verse;
 using Verse.AI.Group;
 using Unity.Jobs;
 using static UnityEngine.GraphicsBuffer;
-using Steamworks;
 using static PogoAI.Patches.JobGiver_AISapper;
 using System;
+using Verse.Noise;
+using Unity.Collections;
 
 namespace PogoAI.Patches
 {
@@ -34,34 +35,33 @@ namespace PogoAI.Patches
             }
         }
 
-        public class CustomTuning : PathFinderCostTuning.ICustomizer
+        public class AlreadyReservedCustomizer : PathRequest.IPathGridCustomizer, IDisposable
         {
-            Pawn pawn;
-
-            public CustomTuning(Pawn pawn)
+            private NativeArray<ushort> grid;
+            private Pawn pawn;
+            public AlreadyReservedCustomizer(Pawn pawn)
             {
                 this.pawn = pawn;
             }
 
-            public int CostOffset(IntVec3 from, IntVec3 to)
+            public NativeArray<ushort> GetOffsetGrid()
             {
-                if (pawn != null)
+                this.grid = new NativeArray<ushort>(pawn.Map.cellIndices.NumGridCells, Allocator.Persistent);
+                foreach (var cached in pathCostCache)
                 {
-                    var edifice = from.GetEdifice(pawn.Map);
-                    if (edifice != null && Utilities.CellBlockedFor(pawn, from) && !pawn.CanReserve(edifice))
+                    if (cached.blockingThing != null && cached.pawn != pawn)
                     {
+                        this.grid[pawn.Map.cellIndices.CellToIndex(cached.blockingThing.Position)] = (ushort)10000;
 #if DEBUG
-                        Find.CurrentMap.debugDrawer.FlashCell(from, 0.5f, "NPB", 60); //Green
+                        Find.CurrentMap.debugDrawer.FlashCell(cached.blockingThing.Position, 0.5f, "NPB", 60); //Green
 #endif
-                        return 10000;
                     }
                 }
-                return 0;
+                return this.grid;
             }
 
+            public void Dispose() => this.grid.Dispose();
         }
-
-        public static PathFinderCostTuning customTuning = new PathFinderCostTuning();
 
         public static List<CachedPath> pathCostCache = new List<CachedPath>();
 
@@ -130,9 +130,9 @@ namespace PogoAI.Patches
                     
                 if (findNewPaths && memoryValue == null && pathCostCache.Count <= Init.settings.maxSappers)
                 {
-                    customTuning.custom = new CustomTuning(pawn);
-                    using (PawnPath pawnPath = pawn.Map.pathFinder.FindPath(pawn.Position, intVec,
-                        TraverseParms.For(pawn, Danger.None, TraverseMode.PassAllDestroyableThings, false, true, false), PathEndMode.OnCell, customTuning))
+                    var customizer = new AlreadyReservedCustomizer(pawn);
+                    using (PawnPath pawnPath = pawn.Map.pathFinder.FindPathNow(pawn.Position, intVec,
+                        TraverseParms.For(pawn, Danger.None, TraverseMode.PassAllDestroyableThings, false, true, false), null, PathEndMode.OnCell, customizer))
                     {
                         var nodes = Traverse.Create(pawnPath).Field("nodes").GetValue<List<IntVec3>>();
                         IntVec3 cellBeforeBlocker = IntVec3.Invalid;
@@ -259,7 +259,7 @@ namespace PogoAI.Patches
                         {
                             job = JobMaker.MakeJob(JobDefOf.AttackMelee, blockingThing);
                         }
-                        if (!pawn.HasReserved(blockingThing))
+                        if (pawn.CanReserve(blockingThing) && !pawn.HasReserved(blockingThing))
                         {
                             pawn.ClearAllReservations();
                             pawn.Reserve(blockingThing, job);

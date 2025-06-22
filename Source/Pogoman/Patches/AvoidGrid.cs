@@ -1,5 +1,4 @@
 ﻿using HarmonyLib;
-using Mono.Unix.Native;
 using RimWorld;
 using System;
 using System.Collections;
@@ -8,11 +7,12 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Threading;
 using Unity.Baselib.LowLevel;
+using Unity.Collections;
 using UnityEngine;
-using UnityEngine.Networking.Types;
 using UnityEngine.SocialPlatforms;
 using Verse;
 using Verse.AI;
+using LudeonTK;
 using Verse.Noise;
 
 namespace PogoAI.Patches
@@ -38,7 +38,9 @@ namespace PogoAI.Patches
             }
 
             gridDirty.SetValue(false);
-            __instance.Grid.Clear(0);
+            var gridField = instance.Field("grid");
+            NativeArray<byte> grid = gridField.GetValue<NativeArray<byte>>();
+            grid.Clear();
             counter = 0;
 
             try
@@ -173,7 +175,7 @@ namespace PogoAI.Patches
             {
                 IntVec3 intVec = pos + GenRadial.RadialPattern[i];
                 if (intVec.InBounds(map) && intVec.WalkableByNormal(map)
-                    && __instance.Grid[intVec] == 0)
+                    && __instance.Grid[map.cellIndices.CellToIndex(intVec)] == 0)
                 {
                     Traverse.Create(__instance).Method("IncrementAvoidGrid", intVec, incAmount).GetValue();
                 }

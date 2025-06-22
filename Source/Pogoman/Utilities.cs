@@ -53,8 +53,8 @@ namespace PogoAI
                         || (edifice.def.mineable && edifice.def != ThingDefOf.CollapsedRocks && edifice.def != ThingDefOf.RaisedRocks))
                         && pawn.CanReserve(edifice))
                     {
-                        using (PawnPath pawnPath = pawn.Map.pathFinder.FindPath(pawn.Position, edifice,
-                            TraverseParms.For(pawn, Danger.Deadly, TraverseMode.ByPawn, false, false, false), PathEndMode.Touch, null))
+                        using (PawnPath pawnPath = pawn.Map.pathFinder.FindPathNow(pawn.Position, edifice,
+                            TraverseParms.For(pawn, Danger.Deadly, TraverseMode.ByPawn, false, false, false), null, PathEndMode.Touch))
                         {
                             if (pawnPath == PawnPath.NotFound || Traverse.Create(pawnPath).Field("nodes").GetValue<List<IntVec3>>().Any(x => PawnUtility.AnyPawnBlockingPathAt(x, pawn, true, false, false)))
                             {
