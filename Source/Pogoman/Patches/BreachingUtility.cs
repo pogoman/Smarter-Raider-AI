@@ -100,7 +100,6 @@ namespace PogoAI.Patches
             static void Postfix(Pawn pawn, ref bool __result)
             {
                 var lord = pawn.GetLord();
-                Log.Message($"result {__result} {lord.ownedPawns.Any(x => x.CurJob?.def == JobDefOf.UseVerbOnThing)}");
                 if (!__result && !lord.ownedPawns.Any(x => x.CurJob?.def == JobDefOf.UseVerbOnThing))
                 {
                     var data = LordDataFor(lord);
