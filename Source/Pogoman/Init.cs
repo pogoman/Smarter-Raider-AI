@@ -135,7 +135,7 @@ namespace PogoAI
             Listing_Standard listingStandard = new Listing_Standard();
             listingStandard.Begin(inRect);    
             listingStandard.CheckboxLabeled("Every raid can sap/dig:", ref settings.everyRaidSaps);
-            listingStandard.TextFieldNumericLabeled("Maximum number of sappers per raid:", ref settings.maxSappers, ref settings.maxSappersBuf, 0, 100);
+            listingStandard.TextFieldNumericLabeled("Maximum number of sappers per raid (def 20): ", ref settings.maxSappers, ref settings.maxSappersBuf, 0, 100);
             listingStandard.AddLabeledTextField("Allowed Breach Weapons:\n(comma separated, case insensitive, partial match, no spaces)", ref settings.breachWeapons, 0.25f, 80);
             if (listingStandard.ButtonTextLabeled("Minimum Smart Raid Tech Level:\n(tech levels that use the avoid grid)", settings.minSmartTechLevel.ToString(), TextAnchor.UpperLeft, (string)null, (string)null))
             {
@@ -156,9 +156,9 @@ namespace PogoAI
                 listingStandard.CheckboxLabeled("Enable Combat Extended Compatibility Performance fix: \n(recommeded to leave on. Requires game restart.)",
                     ref settings.combatExtendedCompatPerf);
             }
-            listingStandard.TextFieldNumericLabeled("Minimum reaction time:", ref settings.reactionMinSeconds, ref settings.reactionMinBuf, 0.1f);
-            listingStandard.TextFieldNumericLabeled("Maximum reaction time:", ref settings.reactionMaxSeconds, ref settings.reactionMaxBuf, 0.1f);
-            listingStandard.TextFieldNumericLabeled<int>($"Pawn/Turret LOS pathfinding cell cost values (def: {PogoSettings.AVOID_DEFAULT_COST})", ref settings.costLOS, ref settings.costLOSBuf);
+            listingStandard.TextFieldNumericLabeled("Minimum reaction time (def 1.2): ", ref settings.reactionMinSeconds, ref settings.reactionMinBuf, 0.1f);
+            listingStandard.TextFieldNumericLabeled("Maximum reaction time (def 2.4): ", ref settings.reactionMaxSeconds, ref settings.reactionMaxBuf, 0.1f);
+            listingStandard.TextFieldNumericLabeled<int>($"Pawn/Turret LOS pathfinding cell cost values (def {PogoSettings.AVOID_DEFAULT_COST}): ", ref settings.costLOS, ref settings.costLOSBuf);
             listingStandard.Label("Note: Any updates require a game restart. Reaction time settings may affect performance.\n");
             listingStandard.End();
             settings.Write();
