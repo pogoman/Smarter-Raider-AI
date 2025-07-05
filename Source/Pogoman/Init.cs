@@ -19,12 +19,20 @@ namespace PogoAI
 
         public bool everyRaidSaps = true;
         public int maxSappers = 20;
+        public string maxSappersBuf;
+        public float reactionMinSeconds = 1.2f;
+        public float reactionMaxSeconds = 2.4f;
+        public string reactionMinBuf;
+        public string reactionMaxBuf;
         public string breachWeapons = DEFAULT_BREACH_WEAPONS;
         public bool combatExtendedCompatPerf = true;
         public TechLevel minSmartTechLevel = TechLevel.Neolithic;
-        public string costBlockedDoorBuf;
         public int costLOS = AVOID_DEFAULT_COST;
         public string costLOSBuf;
+
+        public int reactionMin => (int)(reactionMinSeconds * 100);
+
+        public int reactionMax => (int)(reactionMaxSeconds * 100);
 
         public override void ExposeData()
         {
@@ -127,7 +135,7 @@ namespace PogoAI
             Listing_Standard listingStandard = new Listing_Standard();
             listingStandard.Begin(inRect);    
             listingStandard.CheckboxLabeled("Every raid can sap/dig:", ref settings.everyRaidSaps);
-            listingStandard.SliderLabeled("Maximum number of sappers per raid:\n(Higher numbers may affect performance)", settings.maxSappers, 1, 50);
+            listingStandard.TextFieldNumericLabeled("Maximum number of sappers per raid:", ref settings.maxSappers, ref settings.maxSappersBuf, 0, 100);
             listingStandard.AddLabeledTextField("Allowed Breach Weapons:\n(comma separated, case insensitive, partial match, no spaces)", ref settings.breachWeapons, 0.25f, 80);
             if (listingStandard.ButtonTextLabeled("Minimum Smart Raid Tech Level:\n(tech levels that use the avoid grid)", settings.minSmartTechLevel.ToString(), TextAnchor.UpperLeft, (string)null, (string)null))
             {
@@ -148,8 +156,10 @@ namespace PogoAI
                 listingStandard.CheckboxLabeled("Enable Combat Extended Compatibility Performance fix: \n(recommeded to leave on. Requires game restart.)",
                     ref settings.combatExtendedCompatPerf);
             }
-            listingStandard.Label("WARNING: Advanced settings below, change at your own risk. Any updates require a game restart.\n\nPathfinding algorithm cell cost values:\n");
-            listingStandard.TextFieldNumericLabeled<int>($"Pawn/Turret LOS (additive on intersect) (def: {PogoSettings.AVOID_DEFAULT_COST})", ref settings.costLOS, ref settings.costLOSBuf);
+            listingStandard.TextFieldNumericLabeled("Minimum reaction time:", ref settings.reactionMinSeconds, ref settings.reactionMinBuf, 0.1f);
+            listingStandard.TextFieldNumericLabeled("Maximum reaction time:", ref settings.reactionMaxSeconds, ref settings.reactionMaxBuf, 0.1f);
+            listingStandard.TextFieldNumericLabeled<int>($"Pawn/Turret LOS pathfinding cell cost values (def: {PogoSettings.AVOID_DEFAULT_COST})", ref settings.costLOS, ref settings.costLOSBuf);
+            listingStandard.Label("Note: Any updates require a game restart. Reaction time settings may affect performance.\n");
             listingStandard.End();
             settings.Write();
         }

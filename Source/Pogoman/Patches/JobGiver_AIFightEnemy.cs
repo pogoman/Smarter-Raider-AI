@@ -18,6 +18,7 @@ namespace PogoAI.Patches
             {
                 if (__result != null && __result.targetA.Thing != null && __result.def == JobDefOf.AttackMelee)
                 {
+                    __result.expiryInterval = Rand.RangeInclusive(Init.settings.reactionMin, Init.settings.reactionMax);
                     if (pawn.Position.DistanceTo(__result.targetA.Cell) > 3 && pawn.Map.avoidGrid.Grid[pawn.Map.cellIndices.CellToIndex(pawn.Position)] == 0 
                         && pawn.Map.avoidGrid.Grid[pawn.Map.cellIndices.CellToIndex(__result.targetA.Thing.Position)] > 0 || !pawn.CanReach(__result.targetA.Thing, PathEndMode.Touch, Danger.Deadly))
                     {

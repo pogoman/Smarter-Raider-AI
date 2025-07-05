@@ -222,7 +222,7 @@ namespace PogoAI.Patches
                 if (__result != null)
                 {
                     __result.collideWithPawns = true;
-                    __result.expiryInterval = Rand.RangeInclusive(120, 240);
+                    __result.expiryInterval = Rand.RangeInclusive(Init.settings.reactionMin, Init.settings.reactionMax);
                     __result.ignoreDesignations = true;
                     __result.checkOverrideOnExpire = true;
                     __result.expireRequiresEnemiesNearby = false;
