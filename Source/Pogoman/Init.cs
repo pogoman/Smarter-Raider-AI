@@ -41,6 +41,8 @@ namespace PogoAI
             Scribe_Values.Look(ref breachWeapons, "breachWeapons", DEFAULT_BREACH_WEAPONS, true);
             Scribe_Values.Look(ref combatExtendedCompatPerf, "combatExtendedCompatPerf", true, true);
             Scribe_Values.Look(ref maxSappers, "maxSappers", 20, true);
+            Scribe_Values.Look(ref reactionMinSeconds, "reactionMinSeconds", 1.2f, true);
+            Scribe_Values.Look(ref reactionMaxSeconds, "reactionMaxSeconds", 2.4f, true);
             Scribe_Values.Look<TechLevel>(ref minSmartTechLevel, "minSmartTechLevel", TechLevel.Neolithic, true);
             Scribe_Values.Look(ref costLOS, "costLOS", AVOID_DEFAULT_COST, true);
         }
