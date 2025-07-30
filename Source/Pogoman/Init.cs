@@ -72,7 +72,7 @@ namespace PogoAI
             settings = GetSettings<PogoSettings>();
             harmony.PatchAll();
             patchPrivateClass(typeof(BreachingUtility), typeof(Patches.BreachingUtility.BreachRangedCastPositionFinder_TryFindRangedCastPosition), "RimWorld.BreachingUtility+BreachRangedCastPositionFinder", "TryFindRangedCastPosition", "Postfix");
-            //patchPrivateClass(typeof(BreachingUtility), typeof(Patches.BreachingUtility.BreachRangedCastPositionFinder_SafeForRangedCast), "RimWorld.BreachingUtility+BreachRangedCastPositionFinder", "SafeForRangedCast", "Postfix");
+            patchPrivateClass(typeof(BreachingUtility), typeof(Patches.BreachingUtility.BreachRangedCastPositionFinder_SafeForRangedCast), "RimWorld.BreachingUtility+BreachRangedCastPositionFinder", "SafeForRangedCast", "Postfix");
             patchPrivateMethod(typeof(RimWorld.JobGiver_AIFightEnemy), typeof(Patches.JobGiver_AIFightEnemy.JobGiver_AIFightEnemy_TryGiveJob), "TryGiveJob", "Prefix");
             patchPrivateMethod(typeof(RimWorld.JobGiver_AIFightEnemy), typeof(Patches.JobGiver_AIFightEnemy.JobGiver_AIFightEnemy_TryGiveJob), "TryGiveJob", "Postfix");
         }

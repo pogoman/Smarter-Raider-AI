@@ -23,16 +23,15 @@ namespace PogoAI.Patches
             //Everything here needs to be efficient, called 100000s times
             static void Postfix(IntVec3 c, ref bool __result, object __instance)
             {
-                if (__result)
+                if (__result && enforceMinimumRange)
                 {
                     var instance = Traverse.Create(__instance);
                     var verb = instance.Field("verb").GetValue<Verb>();
                     var map = instance.Field("breachingGrid").GetValue<BreachingGrid>().Map;
-                    if (!c.InBounds(map) || !c.Walkable(map))
-                    {
-                        __result = false;
-                    }
-                    __result = true;
+                    //if (!c.InBounds(map) || !c.Walkable(map))
+                    //{
+                    //    __result = false;
+                    //}
                     if (verb == null)
                     {
                         return;
@@ -54,29 +53,29 @@ namespace PogoAI.Patches
                     }
                     var target = instance.Field("target").GetValue<Thing>();
                     var effective = verb.EffectiveRange * verb.EffectiveRange / modifier;
-                    __result = !enforceMinimumRange || target.Position.DistanceToSquared(c) > effective;
+                    __result = target.Position.DistanceToSquared(c) > effective;
 
                     //Check for nearby reserved firingpos in case of FF in CE (mainly a problem for cents)
-                    if (__result && verb.EffectiveRange > 30)
-                    {
-                        var reservedDestinations = Traverse.Create(map.pawnDestinationReservationManager).Field("reservedDestinations").GetValue<Dictionary<Faction, PawnDestinationReservationManager.PawnDestinationSet>>();
-                        if (reservedDestinations.ContainsKey(verb.Caster.Faction))
-                        {
-                            var reservations = reservedDestinations[verb.Caster.Faction]
-                               .list.Where(x => x.job?.def == JobDefOf.UseVerbOnThing && x.claimant.GetLord() == ((Pawn)verb.Caster).GetLord());
-                            foreach (var reservation in reservations)
-                            {
-                                Find.CurrentMap.debugDrawer.FlashCell(c, 0.2f, $"t", 60);
-                                var num = (float)(c - reservation.target).LengthHorizontalSquared;
-                                if ((projectile.projectile.explosionRadius == 0f || num < 100f) && PointsCollinear(c, reservation.target, target.Position, 5))
-                                {
-                                    Log.Message($"{PointsCollinear(c, reservation.target, target.Position, 1)} {c} {reservation.target}");
-                                    __result = false;
-                                    break;
-                                }
-                            }
-                        }
-                    }
+                    //if (__result && verb.EffectiveRange > 30)
+                    //{
+                    //    var reservedDestinations = Traverse.Create(map.pawnDestinationReservationManager).Field("reservedDestinations").GetValue<Dictionary<Faction, PawnDestinationReservationManager.PawnDestinationSet>>();
+                    //    if (reservedDestinations.ContainsKey(verb.Caster.Faction))
+                    //    {
+                    //        var reservations = reservedDestinations[verb.Caster.Faction]
+                    //           .list.Where(x => x.job?.def == JobDefOf.UseVerbOnThing && x.claimant.GetLord() == ((Pawn)verb.Caster).GetLord());
+                    //        foreach (var reservation in reservations)
+                    //        {
+                    //            Find.CurrentMap.debugDrawer.FlashCell(c, 0.2f, $"t", 60);
+                    //            var num = (float)(c - reservation.target).LengthHorizontalSquared;
+                    //            if ((projectile.projectile.explosionRadius == 0f || num < 100f) && PointsCollinear(c, reservation.target, target.Position, 5))
+                    //            {
+                    //                Log.Message($"{PointsCollinear(c, reservation.target, target.Position, 1)} {c} {reservation.target}");
+                    //                __result = false;
+                    //                break;
+                    //            }
+                    //        }
+                    //    }
+                    //}
                 }
             }
 
@@ -124,7 +123,7 @@ namespace PogoAI.Patches
 #endif
                     }
                     doneReset = true;
-                }
+                } 
             }
         }
 
