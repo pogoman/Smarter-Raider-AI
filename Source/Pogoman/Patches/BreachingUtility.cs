@@ -21,76 +21,79 @@ namespace PogoAI.Patches
         public static class BreachRangedCastPositionFinder_SafeForRangedCast
         {
             //Everything here needs to be efficient, called 100000s times
-            static bool Prefix(IntVec3 c, ref bool __result, object __instance)
+            static void Postfix(IntVec3 c, ref bool __result, object __instance)
             {
-                var instance = Traverse.Create(__instance);
-                var verb = instance.Field("verb").GetValue<Verb>();
-                var map = instance.Field("breachingGrid").GetValue<BreachingGrid>().Map;
-                if (!c.InBounds(map) || !c.Walkable(map))
-                { 
-                    __result = false;
-                    return false;
-                }
-                __result = true;
-                if (verb == null)
+                if (__result)
                 {
-                    return false;
-                }
-
-                //Check weapon min range in case of splash (cheaper than original code)
-                ThingDef projectile = verb.GetProjectile();
-                float modifier = 10;
-                if (projectile != null && projectile.projectile.explosionRadius > 0f)
-                {
-                    if (verb.EquipmentCompSource?.parent?.def.thingCategories.FirstOrDefault()?.defName == "Grenades")
+                    var instance = Traverse.Create(__instance);
+                    var verb = instance.Field("verb").GetValue<Verb>();
+                    var map = instance.Field("breachingGrid").GetValue<BreachingGrid>().Map;
+                    if (!c.InBounds(map) || !c.Walkable(map))
                     {
-                        modifier = 1.5f;
+                        __result = false;
                     }
-                    else
+                    __result = true;
+                    if (verb == null)
                     {
-                        modifier = 5;
+                        return;
                     }
-                }
-                var target = instance.Field("target").GetValue<Thing>();
-                var effective = verb.EffectiveRange * verb.EffectiveRange / modifier;
-                __result = !enforceMinimumRange || target.Position.DistanceToSquared(c) > effective;
 
-                //Check for nearby reserved firingpos in case of FF in CE (mainly a problem for cents)
-                if (__result && verb.EffectiveRange > 30)
-                {
-                    var reservedDestinations = Traverse.Create(map.pawnDestinationReservationManager).Field("reservedDestinations").GetValue<Dictionary<Faction, PawnDestinationReservationManager.PawnDestinationSet>>();
-                    if (reservedDestinations.ContainsKey(verb.Caster.Faction))
+                    //Check weapon min range in case of splash (cheaper than original code)
+                    ThingDef projectile = verb.GetProjectile();
+                    float modifier = 10;
+                    if (projectile != null && projectile.projectile.explosionRadius > 0f)
                     {
-                        var reservations = reservedDestinations[verb.Caster.Faction]
-                           .list.Where(x => x.job?.def == JobDefOf.UseVerbOnThing && x.claimant.GetLord() == ((Pawn)verb.Caster).GetLord());
-                        foreach (var reservation in reservations)
+                        if (verb.EquipmentCompSource?.parent?.def.thingCategories.FirstOrDefault()?.defName == "Grenades")
                         {
-                            var num = (float)(c - reservation.target).LengthHorizontalSquared;
-                            if ((projectile.projectile.explosionRadius == 0f || num < 100f) && PointsCollinear(c, reservation.target, target.Position, 1))
+                            modifier = 1.5f;
+                        }
+                        else
+                        {
+                            modifier = 5;
+                        }
+                    }
+                    var target = instance.Field("target").GetValue<Thing>();
+                    var effective = verb.EffectiveRange * verb.EffectiveRange / modifier;
+                    __result = !enforceMinimumRange || target.Position.DistanceToSquared(c) > effective;
+
+                    //Check for nearby reserved firingpos in case of FF in CE (mainly a problem for cents)
+                    if (__result && verb.EffectiveRange > 30)
+                    {
+                        var reservedDestinations = Traverse.Create(map.pawnDestinationReservationManager).Field("reservedDestinations").GetValue<Dictionary<Faction, PawnDestinationReservationManager.PawnDestinationSet>>();
+                        if (reservedDestinations.ContainsKey(verb.Caster.Faction))
+                        {
+                            var reservations = reservedDestinations[verb.Caster.Faction]
+                               .list.Where(x => x.job?.def == JobDefOf.UseVerbOnThing && x.claimant.GetLord() == ((Pawn)verb.Caster).GetLord());
+                            foreach (var reservation in reservations)
                             {
-                                __result = false;
-                                break;
+                                Find.CurrentMap.debugDrawer.FlashCell(c, 0.2f, $"t", 60);
+                                var num = (float)(c - reservation.target).LengthHorizontalSquared;
+                                if ((projectile.projectile.explosionRadius == 0f || num < 100f) && PointsCollinear(c, reservation.target, target.Position, 5))
+                                {
+                                    Log.Message($"{PointsCollinear(c, reservation.target, target.Position, 1)} {c} {reservation.target}");
+                                    __result = false;
+                                    break;
+                                }
                             }
                         }
                     }
                 }
-                return false;
             }
 
-            public static bool PointsCollinear(IntVec3 a, IntVec3 b, IntVec3 c, float tolerance)
+            public static bool PointsCollinear(IntVec3 shooter, IntVec3 ally, IntVec3 target, float tolerance)
             {
-                if (b.x - a.x == 0 && c.x - a.x == 0)
-                {
-                    return true;
-                }
-                float slopeAB = (b.z - a.z) / (a.x == b.x ? float.PositiveInfinity : (b.x - a.x));
-                float slopeAC = (c.z - a.z) / (a.x == c.x ? float.PositiveInfinity : (c.x - a.x));
-                var difference = Math.Abs(slopeAB - slopeAC);
-#if DEBUG
-                Find.CurrentMap.debugDrawer.FlashCell(a, 0.2f, $"{difference}", 60);
-#endif
+                float dx1 = ally.x - shooter.x;
+                float dz1 = ally.z - shooter.z;
+                float dx2 = target.x - shooter.x;
+                float dz2 = target.z - shooter.z;
 
-                return difference < tolerance;
+                // 2D cross product (gives area of parallelogram)
+                float cross = dx1 * dz2 - dz1 * dx2;
+
+                // Distance from line = area / length of AC
+                float distance = (float)(Math.Abs(cross) / Math.Sqrt(dx2 * dx2 + dz2 * dz2));
+
+                return distance < tolerance;
             }
 
         }
