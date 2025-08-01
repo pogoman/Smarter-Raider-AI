@@ -5,11 +5,7 @@ using System.Linq;
 using Verse.AI;
 using Verse;
 using Verse.AI.Group;
-using Unity.Jobs;
-using static UnityEngine.GraphicsBuffer;
-using static PogoAI.Patches.JobGiver_AISapper;
 using System;
-using Verse.Noise;
 using Unity.Collections;
 
 namespace PogoAI.Patches
@@ -23,6 +19,7 @@ namespace PogoAI.Patches
             public Thing blockingThing;
             public IntVec3 cellBefore;
             public IntVec3 cellAfter;
+            public int cachedAvoid;
             public List<int> excludeList = new List<int>();
 
             public CachedPath(Pawn pawn, IAttackTarget targetThing, Thing blockingThing, IntVec3 cellBefore, IntVec3 cellAfter)
@@ -32,6 +29,7 @@ namespace PogoAI.Patches
                 this.blockingThing = blockingThing;
                 this.cellBefore = cellBefore;
                 this.cellAfter = cellAfter;
+                this.cachedAvoid = pawn.Map.avoidGrid[cellAfter];
             }
         }
 
@@ -89,7 +87,8 @@ namespace PogoAI.Patches
 
                 if (pathCostCache.RemoveAll(x => x.attackTarget.ThreatDisabled(pawn) || x.attackTarget.Thing.Destroyed 
                     || (x.blockingThing == null && !x.pawn.Position.WithinRegions(x.cellBefore, pawn.Map, 9, TraverseMode.NoPassClosedDoors, RegionType.Set_Passable))
-                    || (x.blockingThing != null && !Utilities.CellBlockedFor(pawn, x.blockingThing.Position))) > 0)
+                    || (x.blockingThing != null && !Utilities.CellBlockedFor(pawn, x.blockingThing.Position))
+                    || x.cachedAvoid != pawn.Map.avoidGrid[x.cellAfter]) > 0)
                 {
 #if DEBUG
                     Log.Message($"{pawn} Cache trimmed: {string.Join(",", pathCostCache.Select(x => x.attackTarget.Thing))}");
@@ -113,7 +112,7 @@ namespace PogoAI.Patches
                 {
                     attackTarget = pawn.Map.attackTargetsCache.GetPotentialTargetsFor(pawn)
                         .Where(x => !x.ThreatDisabled(pawn) && !x.Thing.Destroyed && x.Thing.Faction == Faction.OfPlayer && !pathCostCache.Any(y => y.pawn == x.Thing))
-                        .OrderBy(x => ((Thing)x).Position.DistanceToSquared(pawn.Position)).FirstOrDefault();
+                        .OrderBy(x => pawn.Map.avoidGrid[((Thing)x).Position]).ThenBy(x => ((Thing)x).Position.DistanceToSquared(pawn.Position)).FirstOrDefault();
 
                     if (attackTarget == null)
                     {
@@ -127,8 +126,9 @@ namespace PogoAI.Patches
 #endif
                     }
                 }
-                    
-                if (findNewPaths && memoryValue == null && pathCostCache.Count <= Init.settings.maxSappers)
+
+                var maxSaps = pawn.GetLord().ownedPawns.Where(x => !x.Dead && !x.Destroyed).Count() / 2;
+                if (findNewPaths && memoryValue == null && pathCostCache.Count <= (maxSaps > Init.settings.maxSappers ? Init.settings.maxSappers : maxSaps))
                 {
                     var customizer = new AlreadyReservedCustomizer(pawn);
                     using (PawnPath pawnPath = pawn.Map.pathFinder.FindPathNow(pawn.Position, intVec,
