@@ -15,7 +15,7 @@ namespace PogoAI.Patches
 
         static void Postfix(Verse.AI.Group.Lord __instance)
         {
-            if ((Find.TickManager.TicksGame - lastUpdateTicks) / 60 > 5)
+            if ((Find.TickManager.TicksGame - lastUpdateTicks) / 60 > 1)
             {
                 Traverse.Create(__instance.Map.avoidGrid).Field("gridDirty").SetValue(true);
                 lastUpdateTicks = Find.TickManager.TicksGame;

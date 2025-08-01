@@ -21,6 +21,14 @@ namespace PogoAI
         public bool everyRaidSaps = true;
         public int maxSappers = 20;
         public string maxSappersBuf;
+        public int avoidMulti = 10;
+        public string avoidMultiBuf;
+        public int pathCacheDuration = 10;
+        public string pathCacheDurationBuf; 
+        public int gridRefresh = 5;
+        public string gridRefreshBuf;
+        public float wallCostHp = 1f;
+        public string wallCostHpBuf;
         public float reactionMinSeconds = 1.2f;
         public float reactionMaxSeconds = 2.4f;
         public string reactionMinBuf;
@@ -42,6 +50,10 @@ namespace PogoAI
             Scribe_Values.Look(ref breachWeapons, "breachWeapons", DEFAULT_BREACH_WEAPONS, true);
             Scribe_Values.Look(ref combatExtendedCompatPerf, "combatExtendedCompatPerf", true, true);
             Scribe_Values.Look(ref maxSappers, "maxSappers", 20, true);
+            Scribe_Values.Look(ref avoidMulti, "avoidMulti", 10, true);
+            Scribe_Values.Look(ref gridRefresh, "gridRefresh", 5, true);
+            Scribe_Values.Look(ref pathCacheDuration, "pathCacheDuration", 5, true);
+            Scribe_Values.Look(ref wallCostHp, "wallCostHp", 1f, true);
             Scribe_Values.Look(ref reactionMinSeconds, "reactionMinSeconds", 1.2f, true);
             Scribe_Values.Look(ref reactionMaxSeconds, "reactionMaxSeconds", 2.4f, true);
             Scribe_Values.Look<TechLevel>(ref minSmartTechLevel, "minSmartTechLevel", TechLevel.Neolithic, true);
@@ -162,7 +174,11 @@ namespace PogoAI
             }
             listingStandard.TextFieldNumericLabeled("Minimum reaction time (def 1.2): ", ref settings.reactionMinSeconds, ref settings.reactionMinBuf, 0.1f);
             listingStandard.TextFieldNumericLabeled("Maximum reaction time (def 2.4): ", ref settings.reactionMaxSeconds, ref settings.reactionMaxBuf, 0.1f);
+            listingStandard.TextFieldNumericLabeled("Wall/Mineable Cost/HP (def 1): ", ref settings.wallCostHp, ref settings.wallCostHpBuf, 0f);
             listingStandard.TextFieldNumericLabeled<int>($"Pawn/Turret LOS pathfinding cell cost values (def {PogoSettings.AVOID_DEFAULT_COST}): ", ref settings.costLOS, ref settings.costLOSBuf);
+            listingStandard.TextFieldNumericLabeled("Avoid Grid Cost Multiplier (def 10): ", ref settings.avoidMulti, ref settings.avoidMultiBuf, 1);
+            listingStandard.TextFieldNumericLabeled("Grid Refresh Interval (def 5): ", ref settings.gridRefresh, ref settings.gridRefreshBuf, 1);
+            listingStandard.TextFieldNumericLabeled("Path Cache Duration (def 5): ", ref settings.pathCacheDuration, ref settings.pathCacheDurationBuf, 1);
             listingStandard.Label("Note: Any updates require a game restart. Reaction time settings may affect performance.\n");
             listingStandard.End();
             settings.Write();

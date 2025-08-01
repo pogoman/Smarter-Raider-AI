@@ -170,7 +170,7 @@ namespace PogoAI.Patches
             byte b = grid[c];
             b = (byte)Mathf.Min(255, (int)b + num);
             grid[c] = b;
-            Init.pathCostGrid[map.cellIndices.CellToIndex(c)] = (ushort)(b * 3);
+            Init.pathCostGrid[map.cellIndices.CellToIndex(c)] = (ushort)(Init.pathCostGrid[map.cellIndices.CellToIndex(c)] + (num * Init.settings.avoidMulti));
         }
 
         public static void PrintAvoidGridAroundPos(AvoidGrid __instance, Map map, IntVec3 pos, int radius, int incAmount = -1)
