@@ -21,6 +21,7 @@ namespace PogoAI.Patches
     public static class AvoidGrid_Regenerate
     {
         static Traverse instance;
+        static Map map;
         static int counter = 0;
         static ByteGrid tempGrid;
         public static int lastUpdateTicks = 0;
@@ -31,16 +32,18 @@ namespace PogoAI.Patches
             instance = Traverse.Create(__instance);
             //No need to update that frequently
             var gridDirty = instance.Field("gridDirty");
-            if (lastUpdateTicks != 0 && (Find.TickManager.TicksGame - lastUpdateTicks) / 60 < 5)
-            {
-                gridDirty.SetValue(false);
-                return false;
-            }
-
+            //if (lastUpdateTicks != 0 && (Find.TickManager.TicksGame - lastUpdateTicks) / 60 < 5)
+            //{
+            //    gridDirty.SetValue(false);
+            //    return false;
+            //}
+            map = __instance.map;
+            Init.pathCostGrid = new NativeArray<ushort>(map.cellIndices.NumGridCells, Allocator.Persistent);
             gridDirty.SetValue(false);
             var gridField = instance.Field("grid");
             NativeArray<byte> grid = gridField.GetValue<NativeArray<byte>>();
             grid.Clear();
+            Init.pathCostGrid.Clear();
             counter = 0;
 
             try
@@ -167,6 +170,7 @@ namespace PogoAI.Patches
             byte b = grid[c];
             b = (byte)Mathf.Min(255, (int)b + num);
             grid[c] = b;
+            Init.pathCostGrid[map.cellIndices.CellToIndex(c)] = (ushort)(b * 3);
         }
 
         public static void PrintAvoidGridAroundPos(AvoidGrid __instance, Map map, IntVec3 pos, int radius, int incAmount = -1)

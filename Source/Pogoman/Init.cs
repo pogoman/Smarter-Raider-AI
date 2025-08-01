@@ -6,6 +6,7 @@ using HarmonyLib;
 using PogoAI.Extensions;
 using RimWorld;
 using RimWorld.Planet;
+using Unity.Collections;
 using UnityEngine;
 using Verse;
 using Verse.AI;
@@ -54,6 +55,7 @@ namespace PogoAI
         public static bool combatExtended = false;
         public static bool combatAi = false;
         public static Harmony harmony;
+        public static NativeArray<ushort> pathCostGrid;
 
         public Init(ModContentPack contentPack) : base(contentPack)
         {
