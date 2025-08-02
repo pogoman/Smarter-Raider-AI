@@ -27,7 +27,6 @@ namespace PogoAI.Patches
             else if (__result != null)
             {
                 __result.expiryInterval = Rand.RangeInclusive(Init.settings.reactionMin, Init.settings.reactionMax);
-                __result.expireOnEnemiesNearby = false;
             }
         }
     }
