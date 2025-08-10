@@ -4,6 +4,7 @@ using RimWorld;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using UnityEngine;
 using Verse;
 using Verse.AI;
@@ -195,16 +196,9 @@ namespace PogoAI.Patches
                 var breachWeapons = Init.settings.breachWeapons.Replace(" ", string.Empty).Split(',');
                 if (breachWeapons.Any(x => weapon.Matches(x)))
                 {
-                    if (Init.combatExtended)
+                    if (Init.combatExtended && !HasAmmo(pawn.equipment.Primary))
                     {
-                        if (new string[] { "inferno", "chargeblast", "thermal", "thump" }.Any(
-                            x => weapon.Matches(x)))
-                        {
-                            if (!pawn.inventory.innerContainer.Any(x => x.ToString().Matches("ammo")))
-                            {
-                                return false;
-                            }
-                        }
+                        return false;
                     }
 
                     if (!compEquippable.PrimaryVerb.verbProps.ai_IsBuildingDestroyer)
@@ -222,6 +216,33 @@ namespace PogoAI.Patches
                     __result = compEquippable.PrimaryVerb;                    
                     return false;
                 }
+
+                return false;
+            }
+
+            public static bool HasAmmo(Thing gun)
+            {
+                Type AmmoUserType = AccessTools.TypeByName("CombatExtended.CompAmmoUser");
+                MethodInfo GetCompGeneric = AccessTools.Method(typeof(ThingWithComps), "GetComp");
+
+                if (!(gun is ThingWithComps twc)) return false;
+                if (AmmoUserType is null || GetCompGeneric is null) return false;
+
+                var getComp = GetCompGeneric.MakeGenericMethod(AmmoUserType);
+                var comp = getComp.Invoke(twc, null);
+                if (comp is null) return false;
+
+                // Prefer HasAmmo property
+                var hasAmmoProp = AccessTools.Property(AmmoUserType, "HasAmmo");
+                if (hasAmmoProp?.PropertyType == typeof(bool))
+                    return (bool)hasAmmoProp.GetValue(comp);
+
+                // Fallbacks
+                var curMagProp = AccessTools.Property(AmmoUserType, "CurMagCount");
+                if (curMagProp != null) return Convert.ToInt32(curMagProp.GetValue(comp)) > 0;
+
+                var curMagField = AccessTools.Field(AmmoUserType, "CurMagCount");
+                if (curMagField != null) return Convert.ToInt32(curMagField.GetValue(comp)) > 0;
 
                 return false;
             }
