@@ -1,8 +1,5 @@
-﻿using HarmonyLib;
+using HarmonyLib;
 using RimWorld;
-using System;
-using System.Linq;
-using Verse;
 using Verse.AI.Group;
 
 namespace PogoAI.Patches

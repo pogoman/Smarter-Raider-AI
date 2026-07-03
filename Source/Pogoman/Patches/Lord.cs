@@ -1,9 +1,4 @@
-﻿using HarmonyLib;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using HarmonyLib;
 using Verse;
 
 namespace PogoAI.Patches
@@ -11,14 +6,16 @@ namespace PogoAI.Patches
     [HarmonyPatch(typeof(Verse.AI.Group.Lord), "LordTick")]
     static class Lord_LordTick
     {
-        static int lastUpdateTicks = 0;
-
         static void Postfix(Verse.AI.Group.Lord __instance)
         {
-            if ((Find.TickManager.TicksGame - lastUpdateTicks) / 60 > 5)
+            //The 1.6 pathfinder only reads AvoidGrid.Grid when rebuilding its cached cost
+            //grids, so lazily waiting on gridDirty leaves the avoid grid stale. Regenerate
+            //proactively whenever hostiles are around; the prefix throttles the real work.
+            var comp = PogoMapComponent.For(__instance.Map);
+            if (comp != null && (comp.lastAvoidGridUpdateTicks == 0
+                || Find.TickManager.TicksGame - comp.lastAvoidGridUpdateTicks >= AvoidGrid_Regenerate.UpdateIntervalTicks))
             {
-                Traverse.Create(__instance.Map.avoidGrid).Field("gridDirty").SetValue(true);
-                lastUpdateTicks = Find.TickManager.TicksGame;
+                __instance.Map.avoidGrid.Regenerate();
             }
         }
     }

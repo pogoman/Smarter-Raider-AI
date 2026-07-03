@@ -1,14 +1,10 @@
-﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using HarmonyLib;
 using PogoAI.Extensions;
 using RimWorld;
-using RimWorld.Planet;
 using UnityEngine;
 using Verse;
-using Verse.AI;
 
 namespace PogoAI
 {
@@ -55,10 +51,16 @@ namespace PogoAI
         public static bool combatAi = false;
         public static Harmony harmony;
 
+        private static readonly TechLevel[] smartTechLevels =
+        {
+            TechLevel.Neolithic, TechLevel.Medieval, TechLevel.Industrial,
+            TechLevel.Spacer, TechLevel.Ultra, TechLevel.Archotech
+        };
+
         public Init(ModContentPack contentPack) : base(contentPack)
         {
             Log.Message("Smarter Raider AI Initialising...");
-            harmony  = new Harmony("pogo.ai");
+            harmony = new Harmony("pogo.ai");
             combatExtended = LoadedModManager.RunningMods.FirstOrDefault(m => m.PackageId.Matches("CETeam.CombatExtended")) != null;
             if (combatExtended)
             {
@@ -71,84 +73,28 @@ namespace PogoAI
             }
             settings = GetSettings<PogoSettings>();
             harmony.PatchAll();
-            patchPrivateClass(typeof(BreachingUtility), typeof(Patches.BreachingUtility.BreachRangedCastPositionFinder_TryFindRangedCastPosition), "RimWorld.BreachingUtility+BreachRangedCastPositionFinder", "TryFindRangedCastPosition", "Postfix");
-            patchPrivateClass(typeof(BreachingUtility), typeof(Patches.BreachingUtility.BreachRangedCastPositionFinder_SafeForRangedCast), "RimWorld.BreachingUtility+BreachRangedCastPositionFinder", "SafeForRangedCast", "Postfix");
-            patchPrivateMethod(typeof(RimWorld.JobGiver_AIFightEnemy), typeof(Patches.JobGiver_AIFightEnemy.JobGiver_AIFightEnemy_TryGiveJob), "TryGiveJob", "Prefix");
-            patchPrivateMethod(typeof(RimWorld.JobGiver_AIFightEnemy), typeof(Patches.JobGiver_AIFightEnemy.JobGiver_AIFightEnemy_TryGiveJob), "TryGiveJob", "Postfix");
-        }
-
-        private void patchPrivateMethod(Type classType, Type myClass, string methodName, string harmonyMethod)
-        {
-            // Access the private method
-            var methodToPatch = classType.GetMethod(methodName, BindingFlags.NonPublic | BindingFlags.Instance);
-            if (methodToPatch == null)
-            {
-                // Handle the error if the method is not found
-                throw new InvalidOperationException($"Method '{methodName}' not found.");
-            }
-
-            // Apply the patch
-            if (harmonyMethod == "Prefix")
-            {
-                var prefix = new HarmonyMethod(myClass.GetMethod(harmonyMethod, BindingFlags.Static | BindingFlags.NonPublic));
-                harmony.Patch(methodToPatch, prefix, null);
-            }
-            else
-            {
-                var postfix = new HarmonyMethod(myClass.GetMethod(harmonyMethod, BindingFlags.Static | BindingFlags.NonPublic));
-                harmony.Patch(methodToPatch, null, postfix);
-            }
-        }
-
-        private void patchPrivateClass(Type parentClass, Type myClass, string privateClassName, string methodName, string harmonyMethod)
-        {
-            // Access the private class
-            var targetType = parentClass.Assembly.GetType(privateClassName);
-            if (targetType == null)
-            {
-                // Handle the error if the class is not found
-                throw new InvalidOperationException($"Private class '{privateClassName}' not found.");
-            }
-
-            // Access the private method
-            var methodToPatch = targetType.GetMethod(methodName, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-            if (methodToPatch == null)
-            {
-                // Handle the error if the method is not found
-                throw new InvalidOperationException($"Method '{methodName}' not found.");
-            }
-
-            // Apply the patch
-            if (harmonyMethod == "Prefix")
-            {
-                var prefix = new HarmonyMethod(myClass.GetMethod(harmonyMethod, BindingFlags.Static | BindingFlags.NonPublic));
-                harmony.Patch(methodToPatch, prefix, null);
-            }
-            else
-            {
-                var postfix = new HarmonyMethod(myClass.GetMethod(harmonyMethod, BindingFlags.Static | BindingFlags.NonPublic));
-                harmony.Patch(methodToPatch, null, postfix);
-            }
+            // Startup self-check: if a patch target ever disappears in a game update,
+            // PatchAll throws above; this count makes a partial/silent failure visible too.
+            Log.Message($"SRAI: {harmony.GetPatchedMethods().Count()} methods patched");
         }
 
         public override void DoSettingsWindowContents(Rect inRect)
         {
             base.DoSettingsWindowContents(inRect);
             Listing_Standard listingStandard = new Listing_Standard();
-            listingStandard.Begin(inRect);    
+            listingStandard.Begin(inRect);
             listingStandard.CheckboxLabeled("Every raid can sap/dig:", ref settings.everyRaidSaps);
             listingStandard.TextFieldNumericLabeled("Maximum number of sappers per raid (def 20): ", ref settings.maxSappers, ref settings.maxSappersBuf, 0, 100);
             listingStandard.AddLabeledTextField("Allowed Breach Weapons:\n(comma separated, case insensitive, partial match, no spaces)", ref settings.breachWeapons, 0.25f, 80);
             if (listingStandard.ButtonTextLabeled("Minimum Smart Raid Tech Level:\n(tech levels that use the avoid grid)", settings.minSmartTechLevel.ToString(), TextAnchor.UpperLeft, (string)null, (string)null))
             {
-                List<FloatMenuOption> floatMenuOptionList = new List<FloatMenuOption>();
-                floatMenuOptionList.Add(new FloatMenuOption("Neolithic", (Action)(() => settings.minSmartTechLevel = TechLevel.Neolithic), (MenuOptionPriority)4, (Action<Rect>)null, (Thing)null, 0.0f, (Func<Rect, bool>)null, (WorldObject)null, true, 0));
-                floatMenuOptionList.Add(new FloatMenuOption("Medieval", (Action)(() => settings.minSmartTechLevel = TechLevel.Medieval), (MenuOptionPriority)4, (Action<Rect>)null, (Thing)null, 0.0f, (Func<Rect, bool>)null, (WorldObject)null, true, 0));
-                floatMenuOptionList.Add(new FloatMenuOption("Industrial", (Action)(() => settings.minSmartTechLevel = TechLevel.Industrial), (MenuOptionPriority)4, (Action<Rect>)null, (Thing)null, 0.0f, (Func<Rect, bool>)null, (WorldObject)null, true, 0));
-                floatMenuOptionList.Add(new FloatMenuOption("Spacer", (Action)(() => settings.minSmartTechLevel = TechLevel.Spacer), (MenuOptionPriority)4, (Action<Rect>)null, (Thing)null, 0.0f, (Func<Rect, bool>)null, (WorldObject)null, true, 0));
-                floatMenuOptionList.Add(new FloatMenuOption("Ultra", (Action)(() => settings.minSmartTechLevel = TechLevel.Ultra), (MenuOptionPriority)4, (Action<Rect>)null, (Thing)null, 0.0f, (Func<Rect, bool>)null, (WorldObject)null, true, 0));
-                floatMenuOptionList.Add(new FloatMenuOption("Archotech", (Action)(() => settings.minSmartTechLevel = TechLevel.Archotech), (MenuOptionPriority)4, (Action<Rect>)null, (Thing)null, 0.0f, (Func<Rect, bool>)null, (WorldObject)null, true, 0));
-                Find.WindowStack.Add((Window)new FloatMenu(floatMenuOptionList)
+                var options = new List<FloatMenuOption>();
+                foreach (var techLevel in smartTechLevels)
+                {
+                    var level = techLevel;
+                    options.Add(new FloatMenuOption(level.ToString(), () => settings.minSmartTechLevel = level));
+                }
+                Find.WindowStack.Add(new FloatMenu(options)
                 {
                     vanishIfMouseDistant = true
                 });
@@ -163,7 +109,6 @@ namespace PogoAI
             listingStandard.TextFieldNumericLabeled<int>($"Pawn/Turret LOS pathfinding cell cost values (def {PogoSettings.AVOID_DEFAULT_COST}): ", ref settings.costLOS, ref settings.costLOSBuf);
             listingStandard.Label("Note: Any updates require a game restart. Reaction time settings may affect performance.\n");
             listingStandard.End();
-            settings.Write();
         }
 
         public override string SettingsCategory()

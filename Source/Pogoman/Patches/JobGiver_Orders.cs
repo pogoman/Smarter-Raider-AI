@@ -1,12 +1,5 @@
-﻿using HarmonyLib;
-using RimWorld;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using HarmonyLib;
 using Verse;
-using Verse.AI;
 
 namespace PogoAI.Patches
 {
@@ -18,9 +11,9 @@ namespace PogoAI.Patches
         {
             static void Postfix(Pawn pawn)
             {
-                if (pawn.Drafted)
+                if (pawn.Drafted && pawn.Map != null)
                 {
-                    Traverse.Create(pawn.Map.avoidGrid).Field("gridDirty").SetValue(true);
+                    pawn.Map.avoidGrid.gridDirty = true;
                 }
             }
         }

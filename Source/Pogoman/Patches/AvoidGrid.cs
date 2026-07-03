@@ -1,47 +1,81 @@
-﻿using HarmonyLib;
+using HarmonyLib;
+using LudeonTK;
 using RimWorld;
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Security.Cryptography;
-using System.Threading;
-using Unity.Baselib.LowLevel;
+using System.Reflection;
 using Unity.Collections;
 using UnityEngine;
-using UnityEngine.SocialPlatforms;
 using Verse;
 using Verse.AI;
-using LudeonTK;
-using Verse.Noise;
 
 namespace PogoAI.Patches
 {
-    [HarmonyPatch(typeof(AvoidGrid), "Regenerate")]
+    //The 1.6 debug overlay draws the raw grid field, so it never triggers the lazy
+    //regenerate; touch the Grid property while dirty so the overlay stays fresh.
+    [HarmonyPatch(typeof(Verse.AI.AvoidGrid), "DebugDrawOnMap")]
+    public static class AvoidGrid_DebugDrawOnMap
+    {
+        static void Prefix(Verse.AI.AvoidGrid __instance)
+        {
+            if (DebugViewSettings.drawAvoidGrid && Find.CurrentMap == __instance.map && __instance.gridDirty)
+            {
+                _ = __instance.Grid;
+            }
+        }
+    }
+
+    [HarmonyPatch(typeof(Verse.AI.AvoidGrid), "Regenerate")]
     public static class AvoidGrid_Regenerate
     {
-        static Traverse instance;
-        static int counter = 0;
-        static ByteGrid tempGrid;
-        public static int lastUpdateTicks = 0;
-        const bool runMannableCheck = false;
+        public const int UpdateIntervalTicks = 300;
+
+        private class CETurretAccessors
+        {
+            public readonly PropertyInfo gunCompEq;
+            public readonly PropertyInfo active;
+            public readonly PropertyInfo powerComp;
+            public readonly PropertyInfo currentTarget;
+            public readonly PropertyInfo emptyMagazine;
+
+            public CETurretAccessors(Type type)
+            {
+                gunCompEq = type.GetProperty("GunCompEq");
+                active = type.GetProperty("Active");
+                powerComp = type.GetProperty("PowerComp");
+                currentTarget = type.GetProperty("CurrentTarget");
+                emptyMagazine = type.GetProperty("EmptyMagazine");
+            }
+
+            public bool Valid => gunCompEq != null && active != null && powerComp != null
+                && currentTarget != null && emptyMagazine != null;
+        }
+
+        private static readonly Dictionary<Type, CETurretAccessors> ceTurretAccessors = new Dictionary<Type, CETurretAccessors>();
+        private static bool ceTurretWarned;
+
+        // Scratch grid marking cells already counted for the current LOS source,
+        // reused between calls to avoid allocating a map-sized grid per turret.
+        private static ByteGrid visitedGrid;
 
         static bool Prefix(Verse.AI.AvoidGrid __instance)
         {
-            instance = Traverse.Create(__instance);
-            //No need to update that frequently
-            var gridDirty = instance.Field("gridDirty");
-            if (lastUpdateTicks != 0 && (Find.TickManager.TicksGame - lastUpdateTicks) / 60 < 5)
+            var comp = PogoMapComponent.For(__instance.map);
+            if (comp == null)
             {
-                gridDirty.SetValue(false);
-                return false;
+                return true;
             }
 
-            gridDirty.SetValue(false);
-            var gridField = instance.Field("grid");
-            NativeArray<byte> grid = gridField.GetValue<NativeArray<byte>>();
-            grid.Clear();
-            counter = 0;
+            //No need to update more often than every 5 seconds. Leave gridDirty set while
+            //throttled so the first grid access after the cooldown expires regenerates.
+            if (comp.lastAvoidGridUpdateTicks != 0 && Find.TickManager.TicksGame - comp.lastAvoidGridUpdateTicks < UpdateIntervalTicks)
+            {
+                return false;
+            }
+            __instance.gridDirty = false;
+
+            __instance.grid.Clear();
 
             try
             {
@@ -72,7 +106,7 @@ namespace PogoAI.Patches
                     }
                     else
                     {
-                        PrintAvoidGridLOSThing(__instance, pawn.Map, pawn.Position, verb, true);
+                        PrintAvoidGridLOSThing(__instance, pawn.Map, pawn.Position, verb);
                     }
                 }
 
@@ -80,96 +114,124 @@ namespace PogoAI.Patches
                 List<Building> allBuildingsColonist = __instance.map.listerBuildings.allBuildingsColonist;
                 for (int i = 0; i < allBuildingsColonist.Count; i++)
                 {
-                    if (allBuildingsColonist[i].def.building.ai_combatDangerous)
+                    var building = allBuildingsColonist[i];
+                    if (!building.def.building.ai_combatDangerous)
                     {
-                        CompEquippable equip = null;
-                        var threatCondition = false;
-                        var building = allBuildingsColonist[i];
-                        if (Init.combatExtended && building.GetType().ToString().Contains("CombatExtended"))
+                        continue;
+                    }
+                    CompEquippable equip = null;
+                    var threatCondition = false;
+                    if (Init.combatExtended && building.GetType().ToString().Contains("CombatExtended"))
+                    {
+                        var accessors = GetCETurretAccessors(building.GetType());
+                        if (accessors != null)
                         {
                             try
                             {
-                                equip = (CompEquippable)building.GetType().GetProperty("GunCompEq").GetValue(building, null);
-                                var active = (bool)building.GetType().GetProperty("Active").GetValue(building, null);
-                                var activePowerSource = (CompPowerTrader)building.GetType().GetProperty("PowerComp").GetValue(building, null);
-                                var currentTarget = (LocalTargetInfo)building.GetType().GetProperty("CurrentTarget").GetValue(building, null);
-                                var emptyMagazine = (bool)building.GetType().GetProperty("EmptyMagazine").GetValue(building, null);
-                                var isMannable = (bool)building.GetType().GetProperty("IsMannable").GetValue(building, null);
-                                var mannedByColonist = ((CompMannable)building.GetType().GetProperty("MannableComp").GetValue(building, null))?.MannedNow ?? false;
+                                equip = (CompEquippable)accessors.gunCompEq.GetValue(building, null);
+                                var active = (bool)accessors.active.GetValue(building, null);
+                                var activePowerSource = (CompPowerTrader)accessors.powerComp.GetValue(building, null);
+                                var currentTarget = (LocalTargetInfo)accessors.currentTarget.GetValue(building, null);
+                                var emptyMagazine = (bool)accessors.emptyMagazine.GetValue(building, null);
                                 threatCondition = (active || (activePowerSource?.PowerNet?.CanPowerNow(activePowerSource) ?? false))
-                                    && currentTarget == null && !emptyMagazine && equip != null && (!runMannableCheck || !isMannable || mannedByColonist);
+                                    && currentTarget == null && !emptyMagazine && equip != null;
                             }
-                            catch (Exception) { }
-                        }
-                        else
-                        {
-                            Building_TurretGun building_TurretGun = allBuildingsColonist[i] as Building_TurretGun;
-                            equip = building_TurretGun.GunCompEq;
-                            threatCondition = equip != null && (building_TurretGun.Active
-                                || (building_TurretGun.PowerComp?.PowerNet?.CanPowerNow(Traverse.Create(building_TurretGun).Field("powerComp").GetValue<CompPowerTrader>()) ?? false))
-                                && building_TurretGun.TargetCurrentlyAimingAt == null
-                                && (!runMannableCheck || !building_TurretGun.IsMannable || Traverse.Create(building_TurretGun).Field("MannedByColonist").GetValue<bool>())
-                                && (building_TurretGun.refuelableComp?.HasFuel ?? true);
-                        }
-                        if (threatCondition && equip != null)
-                        {
-                            PrintAvoidGridLOSThing(__instance, building.Map, building.Position, equip.PrimaryVerb);
+                            catch (Exception e)
+                            {
+                                WarnCETurretOnce(building.GetType(), e);
+                            }
                         }
                     }
+                    else if (building is Building_TurretGun building_TurretGun)
+                    {
+                        equip = building_TurretGun.GunCompEq;
+                        threatCondition = equip != null && (building_TurretGun.Active
+                            || (building_TurretGun.powerComp?.PowerNet?.CanPowerNow(building_TurretGun.powerComp) ?? false))
+                            && building_TurretGun.TargetCurrentlyAimingAt == null
+                            && (building_TurretGun.refuelableComp?.HasFuel ?? true);
+                    }
+                    if (threatCondition && equip != null)
+                    {
+                        PrintAvoidGridLOSThing(__instance, building.Map, building.Position, equip.PrimaryVerb);
+                    }
                 }
-                instance.Method("ExpandAvoidGridIntoEdifices").GetValue();
-                //Log.Message($"Count: {counter}");
-
+                __instance.ExpandAvoidGridIntoEdifices();
             }
             catch (Exception e)
             {
                 Log.Error($"Smarter Raid AI: {e.Message}\n{e.StackTrace}");
             }
 
-            lastUpdateTicks = Find.TickManager.TicksGame;
+            comp.lastAvoidGridUpdateTicks = Find.TickManager.TicksGame;
+            //The 1.6 pathfinder bakes the avoid grid into cached per-request cost grids
+            //that only rebuild on cell deltas; queue one so they pick up the new values.
+            __instance.map.pathFinder?.MapData.Notify_CellDelta(IntVec3.Zero);
             return false;
-        }        
+        }
 
-        private static void PrintAvoidGridLOSThing(Verse.AI.AvoidGrid __instance, Map map, IntVec3 pos, Verb verb, bool isPawn = false)
+        private static CETurretAccessors GetCETurretAccessors(Type type)
+        {
+            if (!ceTurretAccessors.TryGetValue(type, out var accessors))
+            {
+                accessors = new CETurretAccessors(type);
+                if (!accessors.Valid)
+                {
+                    accessors = null;
+                    WarnCETurretOnce(type, null);
+                }
+                ceTurretAccessors[type] = accessors;
+            }
+            return accessors;
+        }
+
+        private static void WarnCETurretOnce(Type type, Exception e)
+        {
+            if (!ceTurretWarned)
+            {
+                ceTurretWarned = true;
+                Log.Warning($"SRAI: Combat Extended turret type {type} did not have the expected members, skipping it for avoid grid. {e}");
+            }
+        }
+
+        private static void PrintAvoidGridLOSThing(Verse.AI.AvoidGrid avoidGrid, Map map, IntVec3 pos, Verb verb)
         {
             if (verb.Caster.def.defName == "Turret_RocketswarmLauncher")
             {
                 return;
             }
-            float range = verb.verbProps.range;            
-            tempGrid = new ByteGrid(map);
+            if (visitedGrid == null)
+            {
+                visitedGrid = new ByteGrid(map);
+            }
+            else
+            {
+                visitedGrid.ClearAndResizeTo(map);
+            }
+            int cost = Init.settings.costLOS;
+            Func<IntVec3, bool> markCell = cell =>
+            {
+                if (visitedGrid[cell] == 0)
+                {
+                    avoidGrid.IncrementAvoidGrid(cell, cost);
+                    visitedGrid[cell] = (byte)Mathf.Min(255, visitedGrid[cell] + cost);
+                }
+                return true;
+            };
+            float range = verb.verbProps.range;
             float num = verb.verbProps.EffectiveMinRange(true);
             int num2 = GenRadial.NumCellsInRadius(range);
             for (int i = num2; i > (num < 1f ? 0 : GenRadial.NumCellsInRadius(num)); i--)
             {
                 IntVec3 intVec = pos + GenRadial.RadialPattern[i];
                 if (intVec.InBounds(map) && intVec.WalkableByNormal(map)
-                    && tempGrid[intVec] == 0
-                    && GenSight.LineOfSight(pos, intVec, map, true, IncrementAvoidGrid, 0, 0))
+                    && visitedGrid[intVec] == 0)
                 {
-                    counter++;
+                    GenSight.LineOfSight(pos, intVec, map, true, markCell, 0, 0);
                 }
             }
         }
 
-        private static bool IncrementAvoidGrid(IntVec3 cell)
-        {
-            if (tempGrid[cell] == 0)
-            {
-                instance.Method("IncrementAvoidGrid", cell, Init.settings.costLOS).GetValue();
-                IncrementLocalAvoidGrid(tempGrid, cell, Init.settings.costLOS);
-            }
-            return true;
-        }
-
-        private static void IncrementLocalAvoidGrid(ByteGrid grid, IntVec3 c, int num)
-        {
-            byte b = grid[c];
-            b = (byte)Mathf.Min(255, (int)b + num);
-            grid[c] = b;
-        }
-
-        public static void PrintAvoidGridAroundPos(AvoidGrid __instance, Map map, IntVec3 pos, int radius, int incAmount = -1)
+        public static void PrintAvoidGridAroundPos(Verse.AI.AvoidGrid avoidGrid, Map map, IntVec3 pos, int radius, int incAmount = -1)
         {
             if (incAmount == -1)
             {
@@ -179,12 +241,11 @@ namespace PogoAI.Patches
             {
                 IntVec3 intVec = pos + GenRadial.RadialPattern[i];
                 if (intVec.InBounds(map) && intVec.WalkableByNormal(map)
-                    && __instance.Grid[map.cellIndices.CellToIndex(intVec)] == 0)
+                    && avoidGrid.Grid[map.cellIndices.CellToIndex(intVec)] == 0)
                 {
-                    Traverse.Create(__instance).Method("IncrementAvoidGrid", intVec, incAmount).GetValue();
+                    avoidGrid.IncrementAvoidGrid(intVec, incAmount);
                 }
             }
         }
     }
-            
 }

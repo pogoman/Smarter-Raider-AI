@@ -1,29 +1,33 @@
-﻿using HarmonyLib;
+using HarmonyLib;
 using RimWorld;
-using Verse.AI;
 using Verse;
+using Verse.AI;
 
 namespace PogoAI.Patches
 {
-    public class JobGiver_AIFightEnemy
+    [HarmonyPatch(typeof(RimWorld.JobGiver_AIFightEnemy), "TryGiveJob")]
+    public static class JobGiver_AIFightEnemy_TryGiveJob
     {
-        public static class JobGiver_AIFightEnemy_TryGiveJob
+        static void Prefix(RimWorld.JobGiver_AIFightEnemy __instance)
         {
-            static void Prefix(Pawn pawn, RimWorld.JobGiver_AIFightEnemy __instance)
-            {
-                Traverse.Create(__instance).Field("needLOSToAcquireNonPawnTargets").SetValue(true);
-            }
+            __instance.needLOSToAcquireNonPawnTargets = true;
+        }
 
-            static void Postfix(Pawn pawn, ref Job __result)
+        static void Postfix(Pawn pawn, ref Job __result)
+        {
+            if (__result != null && __result.targetA.Thing != null && __result.def == JobDefOf.AttackMelee)
             {
-                if (__result != null && __result.targetA.Thing != null && __result.def == JobDefOf.AttackMelee)
+                __result.expiryInterval = Rand.RangeInclusive(Init.settings.reactionMin, Init.settings.reactionMax);
+                var cellIndices = pawn.Map.cellIndices;
+                var avoidGrid = pawn.Map.avoidGrid;
+                // Drop the melee job if it means charging from a safe cell into defended ground,
+                // or if the target cannot be reached at all.
+                bool chargingIntoDefendedGround = pawn.Position.DistanceTo(__result.targetA.Cell) > 3
+                    && avoidGrid.Grid[cellIndices.CellToIndex(pawn.Position)] == 0
+                    && avoidGrid.Grid[cellIndices.CellToIndex(__result.targetA.Thing.Position)] > 0;
+                if (chargingIntoDefendedGround || !pawn.CanReach(__result.targetA.Thing, PathEndMode.Touch, Danger.Deadly))
                 {
-                    __result.expiryInterval = Rand.RangeInclusive(Init.settings.reactionMin, Init.settings.reactionMax);
-                    if (pawn.Position.DistanceTo(__result.targetA.Cell) > 3 && pawn.Map.avoidGrid.Grid[pawn.Map.cellIndices.CellToIndex(pawn.Position)] == 0 
-                        && pawn.Map.avoidGrid.Grid[pawn.Map.cellIndices.CellToIndex(__result.targetA.Thing.Position)] > 0 || !pawn.CanReach(__result.targetA.Thing, PathEndMode.Touch, Danger.Deadly))
-                    {
-                        __result = null;
-                    }
+                    __result = null;
                 }
             }
         }

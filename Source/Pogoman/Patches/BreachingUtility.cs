@@ -1,141 +1,108 @@
-﻿using HarmonyLib;
+using HarmonyLib;
 using PogoAI.Extensions;
 using RimWorld;
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using UnityEngine;
 using Verse;
 using Verse.AI;
 using Verse.AI.Group;
-using static RimWorld.BreachingUtility;
 
 namespace PogoAI.Patches
 {
     public class BreachingUtility
     {
-        public static bool breachMineables = false;
-        public static bool enforceMinimumRange = true;
-        public static bool doneReset = false;
-
+        [HarmonyPatch(typeof(RimWorld.BreachingUtility.BreachRangedCastPositionFinder), "SafeForRangedCast")]
         public static class BreachRangedCastPositionFinder_SafeForRangedCast
         {
             //Everything here needs to be efficient, called 100000s times
-            static void Postfix(IntVec3 c, ref bool __result, object __instance)
+            static void Postfix(IntVec3 c, ref bool __result, RimWorld.BreachingUtility.BreachRangedCastPositionFinder __instance)
             {
-                if (__result && enforceMinimumRange)
+                if (!__result)
                 {
-                    var instance = Traverse.Create(__instance);
-                    var verb = instance.Field("verb").GetValue<Verb>();
-                    var map = instance.Field("breachingGrid").GetValue<BreachingGrid>().Map;
-                    //if (!c.InBounds(map) || !c.Walkable(map))
-                    //{
-                    //    __result = false;
-                    //}
-                    if (verb == null)
-                    {
-                        return;
-                    }
-
-                    //Check weapon min range in case of splash (cheaper than original code)
-                    ThingDef projectile = verb.GetProjectile();
-                    float modifier = 10;
-                    if (projectile != null && projectile.projectile.explosionRadius > 0f)
-                    {
-                        if (verb.EquipmentCompSource?.parent?.def.thingCategories.FirstOrDefault()?.defName == "Grenades")
-                        {
-                            modifier = 1.5f;
-                        }
-                        else
-                        {
-                            modifier = 5;
-                        }
-                    }
-                    var target = instance.Field("target").GetValue<Thing>();
-                    var effective = verb.EffectiveRange * verb.EffectiveRange / modifier;
-                    __result = target.Position.DistanceToSquared(c) > effective;
-
-                    //Check for nearby reserved firingpos in case of FF in CE (mainly a problem for cents)
-                    //if (__result && verb.EffectiveRange > 30)
-                    //{
-                    //    var reservedDestinations = Traverse.Create(map.pawnDestinationReservationManager).Field("reservedDestinations").GetValue<Dictionary<Faction, PawnDestinationReservationManager.PawnDestinationSet>>();
-                    //    if (reservedDestinations.ContainsKey(verb.Caster.Faction))
-                    //    {
-                    //        var reservations = reservedDestinations[verb.Caster.Faction]
-                    //           .list.Where(x => x.job?.def == JobDefOf.UseVerbOnThing && x.claimant.GetLord() == ((Pawn)verb.Caster).GetLord());
-                    //        foreach (var reservation in reservations)
-                    //        {
-                    //            Find.CurrentMap.debugDrawer.FlashCell(c, 0.2f, $"t", 60);
-                    //            var num = (float)(c - reservation.target).LengthHorizontalSquared;
-                    //            if ((projectile.projectile.explosionRadius == 0f || num < 100f) && PointsCollinear(c, reservation.target, target.Position, 5))
-                    //            {
-                    //                Log.Message($"{PointsCollinear(c, reservation.target, target.Position, 1)} {c} {reservation.target}");
-                    //                __result = false;
-                    //                break;
-                    //            }
-                    //        }
-                    //    }
-                    //}
+                    return;
                 }
+                var comp = PogoMapComponent.For(__instance.breachingGrid?.Map);
+                if (comp == null || !comp.enforceMinimumRange)
+                {
+                    return;
+                }
+                var verb = __instance.verb;
+                if (verb == null)
+                {
+                    return;
+                }
+
+                //Check weapon min range in case of splash (cheaper than original code)
+                ThingDef projectile = verb.GetProjectile();
+                float modifier = 10;
+                if (projectile != null && projectile.projectile.explosionRadius > 0f)
+                {
+                    if (verb.EquipmentCompSource?.parent?.def.thingCategories.FirstOrDefault()?.defName == "Grenades")
+                    {
+                        modifier = 1.5f;
+                    }
+                    else
+                    {
+                        modifier = 5;
+                    }
+                }
+                var target = __instance.target;
+                var effective = verb.EffectiveRange * verb.EffectiveRange / modifier;
+                __result = target.Position.DistanceToSquared(c) > effective;
             }
-
-            public static bool PointsCollinear(IntVec3 shooter, IntVec3 ally, IntVec3 target, float tolerance)
-            {
-                float dx1 = ally.x - shooter.x;
-                float dz1 = ally.z - shooter.z;
-                float dx2 = target.x - shooter.x;
-                float dz2 = target.z - shooter.z;
-
-                // 2D cross product (gives area of parallelogram)
-                float cross = dx1 * dz2 - dz1 * dx2;
-
-                // Distance from line = area / length of AC
-                float distance = (float)(Math.Abs(cross) / Math.Sqrt(dx2 * dx2 + dz2 * dz2));
-
-                return distance < tolerance;
-            }
-
         }
 
+        [HarmonyPatch(typeof(RimWorld.BreachingUtility.BreachRangedCastPositionFinder), "TryFindRangedCastPosition")]
         public static class BreachRangedCastPositionFinder_TryFindRangedCastPosition
         {
             static void Postfix(Pawn pawn, ref bool __result)
             {
-                var lord = pawn.GetLord();
-                if (!__result && !lord.ownedPawns.Any(x => x.CurJob?.def == JobDefOf.UseVerbOnThing))
+                if (__result)
                 {
-                    var data = LordDataFor(lord);
+                    return;
+                }
+                var lord = pawn.GetLord();
+                var comp = PogoMapComponent.For(pawn.Map);
+                if (lord == null || comp == null)
+                {
+                    return;
+                }
+                if (!lord.ownedPawns.Any(x => x.CurJob?.def == JobDefOf.UseVerbOnThing))
+                {
+                    var data = RimWorld.BreachingUtility.LordDataFor(lord);
                     data.Reset();
 #if DEBUG
                     Log.Message("Could not find breach cast pos for any breacher so resetting breach data");
 #endif
-                    if (enforceMinimumRange)
+                    if (comp.enforceMinimumRange)
                     {
-                        enforceMinimumRange = false;
+                        comp.enforceMinimumRange = false;
 #if DEBUG
                         Log.Message("Could not find breach cast pos so disabling minimum range check");
 #endif
-                    } else if (doneReset && !breachMineables)
+                    }
+                    else if (comp.doneReset && !comp.breachMineables)
                     {
-                        breachMineables = true;
+                        comp.breachMineables = true;
 #if DEBUG
                         Log.Message("Could not find cast after reset and no minrange so breachMineables");
 #endif
                     }
-                    doneReset = true;
-                } 
+                    comp.doneReset = true;
+                }
             }
         }
 
         [HarmonyPatch(typeof(Verse.AI.BreachingGrid), "FindBuildingToBreach")]
         static class BreachingUtility_FindBuildingToBreach
         {
-            static void Postfix(ref Thing __result)
+            static void Postfix(ref Thing __result, Verse.AI.BreachingGrid __instance)
             {
-                if (__result == null && !breachMineables)
+                var comp = PogoMapComponent.For(__instance.Map);
+                if (__result == null && comp != null && !comp.breachMineables)
                 {
-                    breachMineables = true;
+                    comp.breachMineables = true;
 #if DEBUG
                     Log.Message("Could not find breach building so breachMineables");
 #endif
@@ -151,7 +118,9 @@ namespace PogoAI.Patches
                 if (__result)
                 {
                     Building edifice = c.GetEdifice(map);
-                    __result = edifice?.Faction == Faction.OfPlayer || (breachMineables && edifice.def.mineable);
+                    var comp = PogoMapComponent.For(map);
+                    __result = edifice?.Faction == Faction.OfPlayer
+                        || (comp != null && comp.breachMineables && edifice != null && edifice.def.mineable);
                 }
             }
         }
@@ -178,6 +147,9 @@ namespace PogoAI.Patches
         [HarmonyPatch(typeof(RimWorld.BreachingUtility), "FindVerbToUseForBreaching")]
         static class BreachingUtility_FindVerbToUseForBreaching
         {
+            static string breachWeaponsRaw;
+            static string[] breachWeapons;
+
             static bool Prefix(Pawn pawn, ref Verb __result)
             {
                 if (pawn.CurJobDef?.defName == "TendSelf")
@@ -193,7 +165,11 @@ namespace PogoAI.Patches
 
                 var weapon = compEquippable.ToString();
 
-                var breachWeapons = Init.settings.breachWeapons.Replace(" ", string.Empty).Split(',');
+                if (breachWeaponsRaw != Init.settings.breachWeapons)
+                {
+                    breachWeaponsRaw = Init.settings.breachWeapons;
+                    breachWeapons = breachWeaponsRaw.Replace(" ", string.Empty).Split(',');
+                }
                 if (breachWeapons.Any(x => weapon.Matches(x)))
                 {
                     if (Init.combatExtended && !HasAmmo(pawn.equipment.Primary))
@@ -201,48 +177,84 @@ namespace PogoAI.Patches
                         return false;
                     }
 
-                    if (!compEquippable.PrimaryVerb.verbProps.ai_IsBuildingDestroyer)
+                    var verbProps = compEquippable.PrimaryVerb.verbProps;
+                    if (!verbProps.ai_IsBuildingDestroyer)
                     {
                         if (pawn.Faction == Faction.OfMechanoids || equipment.Primary.def.weaponTags.Any(x => x.Matches("GunSingleUse")))
                         {
-                            compEquippable.PrimaryVerb.verbProps.ai_IsBuildingDestroyer = true;
+                            Utilities.SetBuildingDestroyer(verbProps, true);
                         }
                     }
                     if (equipment.Primary.def.weaponTags.Any(x => x.Matches("grenade")))
                     {
-                        compEquippable.PrimaryVerb.verbProps.ai_IsBuildingDestroyer = false;
+                        Utilities.SetBuildingDestroyer(verbProps, false);
                     }
 
-                    __result = compEquippable.PrimaryVerb;                    
+                    __result = compEquippable.PrimaryVerb;
                     return false;
                 }
 
                 return false;
             }
 
+            static bool ceAmmoResolved;
+            static Type ammoUserType;
+            static PropertyInfo hasAmmoProp;
+            static PropertyInfo curMagCountProp;
+            static FieldInfo curMagCountField;
+
             public static bool HasAmmo(Thing gun)
             {
-                Type AmmoUserType = AccessTools.TypeByName("CombatExtended.CompAmmoUser");
-                MethodInfo GetCompGeneric = AccessTools.Method(typeof(ThingWithComps), "GetComp");
+                if (!(gun is ThingWithComps twc))
+                {
+                    return false;
+                }
+                if (!ceAmmoResolved)
+                {
+                    ceAmmoResolved = true;
+                    ammoUserType = AccessTools.TypeByName("CombatExtended.CompAmmoUser");
+                    if (ammoUserType != null)
+                    {
+                        hasAmmoProp = AccessTools.Property(ammoUserType, "HasAmmo");
+                        curMagCountProp = AccessTools.Property(ammoUserType, "CurMagCount");
+                        curMagCountField = AccessTools.Field(ammoUserType, "CurMagCount");
+                    }
+                }
+                if (ammoUserType == null)
+                {
+                    return false;
+                }
 
-                if (!(gun is ThingWithComps twc)) return false;
-                if (AmmoUserType is null || GetCompGeneric is null) return false;
-
-                var getComp = GetCompGeneric.MakeGenericMethod(AmmoUserType);
-                var comp = getComp.Invoke(twc, null);
-                if (comp is null) return false;
+                ThingComp comp = null;
+                var comps = twc.AllComps;
+                for (int i = 0; i < comps.Count; i++)
+                {
+                    if (ammoUserType.IsInstanceOfType(comps[i]))
+                    {
+                        comp = comps[i];
+                        break;
+                    }
+                }
+                if (comp == null)
+                {
+                    return false;
+                }
 
                 // Prefer HasAmmo property
-                var hasAmmoProp = AccessTools.Property(AmmoUserType, "HasAmmo");
                 if (hasAmmoProp?.PropertyType == typeof(bool))
+                {
                     return (bool)hasAmmoProp.GetValue(comp);
+                }
 
                 // Fallbacks
-                var curMagProp = AccessTools.Property(AmmoUserType, "CurMagCount");
-                if (curMagProp != null) return Convert.ToInt32(curMagProp.GetValue(comp)) > 0;
-
-                var curMagField = AccessTools.Field(AmmoUserType, "CurMagCount");
-                if (curMagField != null) return Convert.ToInt32(curMagField.GetValue(comp)) > 0;
+                if (curMagCountProp != null)
+                {
+                    return Convert.ToInt32(curMagCountProp.GetValue(comp)) > 0;
+                }
+                if (curMagCountField != null)
+                {
+                    return Convert.ToInt32(curMagCountField.GetValue(comp)) > 0;
+                }
 
                 return false;
             }
