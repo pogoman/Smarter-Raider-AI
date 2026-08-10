@@ -15,47 +15,6 @@ namespace PogoAI.Patches
             static MethodBase target;
             static ModContentPack CE;
 
-            static bool Prepare()
-            {
-                CE = LoadedModManager.RunningMods.FirstOrDefault(m => m.Name == "Combat Extended");
-
-                if (CE == null || !Init.settings.combatExtendedCompatPerf)
-                {
-                    return false;
-                }
-
-                var assembly = CE.assemblies.loadedAssemblies.FirstOrDefault(a => a.GetName().Name == "CombatExtended");
-
-                var type = assembly?.GetType("CombatExtended.Verb_LaunchProjectileCE");
-
-                if (type == null)
-                {
-                    Log.Warning("Can't patch CombatExtended. No Verb_LaunchProjectileCE");
-
-                    return false;
-                }
-
-                target = AccessTools.DeclaredMethod(type, "TryFindCEShootLineFromTo",
-                    new Type[] { typeof(IntVec3), typeof(LocalTargetInfo), typeof(ShootLine).MakeByRefType() });
-
-                if (target == null)
-                {
-                    Log.Warning("Can't patch Verb_LaunchProjectileCE. No TryFindCEShootLineFromTo");
-
-                    return false;
-                }
-
-                var original = typeof(Verb).GetMethod("TryFindShootLineFromTo");
-                Init.harmony.Unpatch(original, HarmonyPatchType.Prefix, "CombatExtended.HarmonyCE");
-
-                return true;
-            }
-
-            static MethodBase TargetMethod()
-            {
-                return target;
-            }
-
             static bool Prefix(IntVec3 root, LocalTargetInfo targ, ref ShootLine resultingLine, Verb __instance, ref bool __result)
             {
                 if (__instance.EquipmentSource?.def?.ToString().Matches("Mortar") ?? false)

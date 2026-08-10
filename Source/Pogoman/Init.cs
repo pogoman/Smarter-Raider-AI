@@ -21,7 +21,6 @@ namespace PogoAI
         public string reactionMinBuf;
         public string reactionMaxBuf;
         public string breachWeapons = DEFAULT_BREACH_WEAPONS;
-        public bool combatExtendedCompatPerf = true;
         public TechLevel minSmartTechLevel = TechLevel.Neolithic;
         public int costLOS = AVOID_DEFAULT_COST;
         public string costLOSBuf;
@@ -35,7 +34,6 @@ namespace PogoAI
             base.ExposeData();
             Scribe_Values.Look(ref everyRaidSaps, "everyRaidSaps", true, true);
             Scribe_Values.Look(ref breachWeapons, "breachWeapons", DEFAULT_BREACH_WEAPONS, true);
-            Scribe_Values.Look(ref combatExtendedCompatPerf, "combatExtendedCompatPerf", true, true);
             Scribe_Values.Look(ref maxSappers, "maxSappers", 20, true);
             Scribe_Values.Look(ref reactionMinSeconds, "reactionMinSeconds", 1.2f, true);
             Scribe_Values.Look(ref reactionMaxSeconds, "reactionMaxSeconds", 2.4f, true);
@@ -98,11 +96,6 @@ namespace PogoAI
                 {
                     vanishIfMouseDistant = true
                 });
-            }
-            if (combatExtended)
-            {
-                listingStandard.CheckboxLabeled("Enable Combat Extended Compatibility Performance fix: \n(recommeded to leave on. Requires game restart.)",
-                    ref settings.combatExtendedCompatPerf);
             }
             listingStandard.TextFieldNumericLabeled("Minimum reaction time (def 1.2): ", ref settings.reactionMinSeconds, ref settings.reactionMinBuf, 0.1f);
             listingStandard.TextFieldNumericLabeled("Maximum reaction time (def 2.4): ", ref settings.reactionMaxSeconds, ref settings.reactionMaxBuf, 0.1f);
