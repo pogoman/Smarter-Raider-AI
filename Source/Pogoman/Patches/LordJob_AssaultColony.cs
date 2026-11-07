@@ -16,7 +16,7 @@ namespace PogoAI.Patches
                 if (__instance.assaulterFaction?.def.techLevel >= Init.settings.minSmartTechLevel)
                 {
                     __instance.breachers = true;
-                    __instance.useAvoidGridSmart = !Init.combatAi;
+                    __instance.useAvoidGridSmart = true;
                 }
                 Utilities.RestoreBuildingDestroyerFlags();
                 if (Current.Game != null)

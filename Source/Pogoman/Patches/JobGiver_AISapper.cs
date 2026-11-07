@@ -276,20 +276,17 @@ namespace PogoAI.Patches
                 else
                 {
                     var blockingThing = memoryValue.blockingThing;
-                    //Mine needs a reservation on the rock; when another sapper already holds it,
-                    //melee the blocker instead so StartJob doesn't spam failed-reservation errors.
-                    if (blockingThing.def.mineable && !StatDefOf.MiningSpeed.Worker.IsDisabledFor(pawn)
-                        && (pawn.HasReserved(blockingThing) || pawn.CanReserve(blockingThing)))
+                    if (blockingThing.def.mineable && !StatDefOf.MiningSpeed.Worker.IsDisabledFor(pawn))
                     {
                         job = JobMaker.MakeJob(JobDefOf.Mine, blockingThing);
-                        if (!pawn.HasReserved(blockingThing))
-                        {
-                            pawn.Reserve(blockingThing, job);
-                        }
                     }
                     else
                     {
                         job = JobMaker.MakeJob(JobDefOf.AttackMelee, blockingThing);
+                    }
+                    if (pawn.CanReserve(blockingThing) && !pawn.HasReserved(blockingThing))
+                    {
+                        pawn.Reserve(blockingThing, job);
                     }
                 }
                 return job;

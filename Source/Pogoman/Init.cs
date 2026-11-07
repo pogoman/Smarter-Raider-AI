@@ -46,7 +46,6 @@ namespace PogoAI
     {
         public static PogoSettings settings;
         public static bool combatExtended = false;
-        public static bool combatAi = false;
         public static Harmony harmony;
 
         private static readonly TechLevel[] smartTechLevels =
@@ -64,13 +63,8 @@ namespace PogoAI
             {
                 Log.Message("SRAI: CE detected");
             }
-            combatAi = LoadedModManager.RunningMods.FirstOrDefault(m => m.PackageId.Matches("Krkr.rule56")) != null;
-            if (combatAi)
-            {
-                Log.Message("SRAI: CAI detected");
-            }
             settings = GetSettings<PogoSettings>();
-            harmony.PatchAll();
+            harmony.PatchAll(typeof(Init).Assembly);
             // Startup self-check: if a patch target ever disappears in a game update,
             // PatchAll throws above; this count makes a partial/silent failure visible too.
             Log.Message($"SRAI: {harmony.GetPatchedMethods().Count()} methods patched");
