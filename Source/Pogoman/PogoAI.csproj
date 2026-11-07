@@ -3,39 +3,40 @@
 	<PropertyGroup>
 		<RootNamespace>PogoAI</RootNamespace>
 		<AssemblyName>PogoAI</AssemblyName>
-		<TargetFramework>net472</TargetFramework>
+		<!-- net472 = RimWorld 1.4-1.6 (Unity/Mono); net10.0 = RimWorld 1.7+ (Waylith engine). -->
+		<TargetFrameworks>net472;net10.0</TargetFrameworks>
 		<LangVersion>8.0</LangVersion>
 		<PlatformTarget>x64</PlatformTarget>
-		<OutputPath>..\..\1.5\Assemblies</OutputPath>
-		<Optimize>true</Optimize>
-		<DebugType>pdbonly</DebugType>
 		<GenerateAssemblyInfo>false</GenerateAssemblyInfo>
 		<GenerateTargetFrameworkAttribute>false</GenerateTargetFrameworkAttribute>
-		<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-		<AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
-		<ReleaseVersion>0.0.0.1</ReleaseVersion>
-		<SynchReleaseVersion>false</SynchReleaseVersion>
+		<!-- Output goes to bin\<Config>\<TFM>\ so the two targets don't overwrite each other. -->
+		<AppendTargetFrameworkToOutputPath>true</AppendTargetFrameworkToOutputPath>
+		<GenerateDependencyFile>false</GenerateDependencyFile>
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 		<Configurations>Release;Debug</Configurations>
 	</PropertyGroup>
-	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+	<PropertyGroup Condition="'$(Configuration)'=='Release'">
+		<Optimize>true</Optimize>
+		<DebugType>pdbonly</DebugType>
 		<DebugSymbols>true</DebugSymbols>
-		<OutputPath>..\..\1.5\Assemblies</OutputPath>
-		<OutputPath>..\..\1.5\Assemblies</OutputPath>
-		<DefineConstants>TRACE;NDEBUG</DefineConstants>
-		<WarningLevel>4</WarningLevel>
-		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-		<TreatWarningsAsErrors>false</TreatWarningsAsErrors>
 	</PropertyGroup>
-	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
-		<OutputPath>..\..\1.5\Assemblies</OutputPath>
-		<DefineConstants>TRACE;DEBUG_REACTION;DEBUG;NETFRAMEWORK;NET472;</DefineConstants>
-		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-		<TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+	<PropertyGroup Condition="'$(Configuration)'=='Debug'">
 		<DebugType>full</DebugType>
-	</PropertyGroup>	
-	<ItemGroup>
-		<PackageReference Include="Krafs.Rimworld.Ref" Version="1.5.4069" GeneratePathProperty="true" />
-		<PackageReference Include="Lib.Harmony" Version="2.3.3" ExcludeAssets="runtime" />		
+	</PropertyGroup>
+	<!-- RimWorld 1.6 refs + Harmony 2 (shipped by the Harmony mod's 1.6 folder). -->
+	<ItemGroup Condition="'$(TargetFramework)'=='net472'">
+		<PackageReference Include="Krafs.Rimworld.Ref" Version="1.6.4850" />
+		<PackageReference Include="Lib.Harmony" Version="2.3.3" ExcludeAssets="runtime" />
 	</ItemGroup>
-
+	<!-- RimWorld 1.7 refs (unstable until 1.7 ships) + Harmony 3 (the Harmony mod's 1.7 folder builds from 3.*-*). -->
+	<ItemGroup Condition="'$(TargetFramework)'=='net10.0'">
+		<PackageReference Include="Krafs.Rimworld.Ref" Version="1.7.4995-unstable" />
+		<PackageReference Include="Lib.Harmony" Version="3.0.0-rc.4" ExcludeAssets="runtime" />
+	</ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="Krafs.Publicizer" Version="2.3.0" />
+	</ItemGroup>
+	<ItemGroup>
+		<Publicize Include="Assembly-CSharp" />
+	</ItemGroup>
 </Project>

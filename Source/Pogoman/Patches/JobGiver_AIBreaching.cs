@@ -26,7 +26,7 @@ namespace PogoAI.Patches
             }
             else if (__result != null)
             {
-                __result.expiryInterval = Rand.RangeInclusive(120, 240);
+                __result.expiryInterval = Rand.RangeInclusive(Init.settings.reactionMin, Init.settings.reactionMax);
             }
         }
     }

@@ -1,14 +1,9 @@
-﻿using HarmonyLib;
+using HarmonyLib;
+using PogoAI.Extensions;
 using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Numerics;
 using System.Reflection;
 using Verse;
-using Verse.AI;
-using UnityEngine;
-using PogoAI.Extensions;
-using RimWorld;
 
 namespace PogoAI.Patches
 {
@@ -24,7 +19,7 @@ namespace PogoAI.Patches
             {
                 CE = LoadedModManager.RunningMods.FirstOrDefault(m => m.Name == "Combat Extended");
 
-                if (CE == null || !Init.settings.combatExtendedCompatPerf)
+                if (CE == null || true)
                 {
                     return false;
                 }
@@ -68,7 +63,7 @@ namespace PogoAI.Patches
                     return true;
                 }
                 __result = __instance.TryFindShootLineFromTo(root, targ, out resultingLine);
-                if (__result /*&& __instance.CasterPawn?.mindState?.duty?.def != DutyDefOf.Breaching*/)
+                if (__result)
                 {
                     return true;
                 }

@@ -1,12 +1,9 @@
-﻿using HarmonyLib;
+using HarmonyLib;
 using RimWorld;
 using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Verse.AI;
 using Verse;
+using Verse.AI;
 using static PogoAI.Patches.JobGiver_AISapper;
 
 namespace PogoAI.Patches
@@ -16,13 +13,21 @@ namespace PogoAI.Patches
     {
         static bool Prefix(Pawn pawn, ref Job __result)
         {
-            if (pawn.mindState?.duty?.def != DutyDefOf.AssaultColony || pawn.Faction.def.techLevel < Init.settings.minSmartTechLevel || !Init.settings.everyRaidSaps
-                || pawn.Map.attackTargetsCache.GetPotentialTargetsFor(pawn).Count(x => !x.ThreatDisabled(pawn) && !x.Thing.Destroyed && x.Thing.Faction == Faction.OfPlayer) == 0)
+            try
             {
+                if (pawn.mindState?.duty?.def != DutyDefOf.AssaultColony || pawn.Faction.def.techLevel < Init.settings.minSmartTechLevel || !Init.settings.everyRaidSaps
+                    || pawn.Map.attackTargetsCache.GetPotentialTargetsFor(pawn).Count(x => !x.ThreatDisabled(pawn) && !x.Thing.Destroyed && x.Thing.Faction == Faction.OfPlayer) == 0)
+                {
+                    return true;
+                }
+                JobGiver_AISapper_TryGiveJob_Patch.Prefix(pawn, ref __result);
+                return false;
+            }
+            catch (Exception e)
+            {
+                Log.Error($"SRAI Exception: {e.StackTrace}");
                 return true;
             }
-            JobGiver_AISapper_TryGiveJob_Patch.Prefix(pawn, ref __result);
-            return false;
         }
     }
 }
